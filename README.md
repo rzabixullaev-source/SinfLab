@@ -29,4 +29,5 @@ Video xona provayderda avtomatik yaratilmaydi: ustoz tayyor HTTPS havola kiritad
 - docs/ARCHITECTURE.md — arxitektura va papkalar.
 - docs/DATA_MODEL.md — MongoDB collectionlari va ruxsatlar.
 - docs/ROADMAP.md — qolgan ishlar ketma-ketligi.
+- docs/UI_UX.md — to‘q rangli frontend yo‘nalishi va ekranlar.
 - PROJECT_STATE.md — qisqa joriy holat; keyingi ishni shu fayldan boshlang.
