@@ -2,11 +2,14 @@
   "name": "sinflab",
   "private": true,
   "type": "module",
-  "workspaces": ["apps/api", "packages/contracts"],
+  "workspaces": ["apps/api", "apps/web", "packages/contracts"],
   "scripts": {
     "dev:api": "npm run dev --workspace @sinflab/api",
     "start:api": "npm run start --workspace @sinflab/api",
-    "test:api": "npm run test --workspace @sinflab/api"
+    "test:api": "npm run test --workspace @sinflab/api",
+    "dev:web": "npm run dev --workspace @sinflab/web",
+    "build:web": "npm run build --workspace @sinflab/web",
+    "dev:demo-api": "node apps/api/src/demo-server.js"
   },
   "engines": { "node": ">=22" }
 }
