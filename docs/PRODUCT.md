@@ -1,5 +1,7 @@
 # Mahsulot tuzilmasi
 
+Bu fayl mahsulotning to‘liq ko‘zlangan ko‘rinishini tasvirlaydi. Qaysi imkoniyat hozir backendda ishlashini docs/API.md va PROJECT_STATE.md dan tekshiring.
+
 ## Kim foydalanadi?
 
 - Xona egasi: xona ochadi, a’zolar va rollarni boshqaradi.

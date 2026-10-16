@@ -1,0 +1,44 @@
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import { HttpError, errorHandler } from "./shared/errors.js";
+import { authRouter } from "./modules/auth/routes.js";
+import { classroomsRouter } from "./modules/classrooms/routes.js";
+import { lessonsRouter } from "./modules/lessons/routes.js";
+import { messagesRouter } from "./modules/classrooms/messages.js";
+import { resourcesRouter } from "./modules/resources/routes.js";
+import { assignmentsRouter } from "./modules/assignments/routes.js";
+import { submissionsRouter } from "./modules/assignments/submissions.js";
+import { quizzesRouter } from "./modules/quizzes/routes.js";
+import { liveRouter } from "./modules/live/routes.js";
+import { labsRouter } from "./modules/labs/routes.js";
+import { progressRouter } from "./modules/progress/routes.js";
+
+export function createApp({ db, config }) {
+  const app = express();
+  app.disable("x-powered-by");
+  app.use(helmet());
+  app.use(cors({ origin: config.CORS_ORIGIN }));
+  app.use(express.json({ limit: "1mb" }));
+  app.get("/api/v1/health", (_request, response) => {
+    response.json({ status: "ok", service: "sinflab-api" });
+  });
+  app.get("/api/v1/ready", async (_request, response) => {
+    await db.command({ ping: 1 });
+    response.json({ status: "ready" });
+  });
+  app.use("/api/v1/auth", authRouter({ db, config }));
+  app.use("/api/v1/classrooms", classroomsRouter({ db, config }));
+  app.use("/api/v1/classrooms", lessonsRouter({ db, config }));
+  app.use("/api/v1/classrooms", messagesRouter({ db, config }));
+  app.use("/api/v1/classrooms", resourcesRouter({ db, config }));
+  app.use("/api/v1/classrooms", assignmentsRouter({ db, config }));
+  app.use("/api/v1/classrooms", submissionsRouter({ db, config }));
+  app.use("/api/v1/classrooms", quizzesRouter({ db, config }));
+  app.use("/api/v1/classrooms", liveRouter({ db, config }));
+  app.use("/api/v1/classrooms", labsRouter({ db, config }));
+  app.use("/api/v1/classrooms", progressRouter({ db, config }));
+  app.use((_request, _response, next) => next(new HttpError(404, "NOT_FOUND", "Route not found")));
+  app.use(errorHandler);
+  return app;
+}

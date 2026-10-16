@@ -1,0 +1,12 @@
+{
+  "name": "sinflab",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/api", "packages/contracts"],
+  "scripts": {
+    "dev:api": "npm run dev --workspace @sinflab/api",
+    "start:api": "npm run start --workspace @sinflab/api",
+    "test:api": "npm run test --workspace @sinflab/api"
+  },
+  "engines": { "node": ">=22" }
+}

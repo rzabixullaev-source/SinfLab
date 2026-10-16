@@ -1,42 +1,31 @@
 # Arxitektura va papkalar
 
-## Tizim chegaralari
+Brauzer (React, keyingi bosqich) → Express API → MongoDB Atlas. API barcha rollar, o‘quv oqimi va xona chegaralarini tekshiradi. Fayl matni Atlas GridFS da, metadata assets collectionida saqlanadi.
 
-Brauzer (apps/web) → API (apps/api) → PostgreSQL, fayl ombori, video xizmati, AI xizmati va laboratoriya xizmati.
+## Hozirgi papkalar
 
-API ruxsat, topshiriq, test, lab urinishlari va progressning yagona nazorat nuqtasi. Brauzer ustoz/o‘quvchi ko‘rinishini boshqaradi. Video xizmati faqat media oqimi va dars sessiyasiga xizmat qiladi; vazifa va baholar bazada qoladi.
+- apps/api/src/app.js — Express marshrutlari va middleware.
+- apps/api/src/config.js, mongo.js, server.js — muhit, Atlas ulanishi, indekslar, server.
+- apps/api/src/modules/auth — foydalanuvchi, parol, JWT.
+- apps/api/src/modules/classrooms — xona, a’zolik, taklif va chat.
+- apps/api/src/modules/lessons — dars jadvali.
+- apps/api/src/modules/resources — papkalar va GridFS fayllar.
+- apps/api/src/modules/assignments — vazifa, revision, feedback.
+- apps/api/src/modules/quizzes — savollar, urinish, avtomatik baholash.
+- apps/api/src/modules/live — tashqi uchrashuv havolasi, sessiya, davomat.
+- apps/api/src/modules/labs — Ohm qonuni tajriba urinishlari.
+- apps/api/src/modules/progress — o‘quvchi davom etish ro‘yxati.
+- apps/api/test — HTTP oqimi testlari va xotira DB adapteri.
+- packages/contracts/src — umumiy Zod so‘rov sxemalari.
+- apps/web — React interfeysi uchun papka, hali boshlanmagan.
+- packages/lab-kits, infra/video, infra/sandbox — keyingi kengaytirish joylari.
 
-## Texnik qismlar
+## Qoidalar
 
-- apps/web/src/app: routing, sessiya va global ko‘rinish.
-- apps/web/src/features: xona, jonli dars, material, vazifa, test, lab va progress ekranlari.
-- apps/web/src/shared: umumiy interfeys elementlari va API klienti.
-- apps/api/src/modules: har bir domen uchun route, service, repository, permission tekshiruvi.
-- apps/api/src/shared: konfiguratsiya, xato qaytarish, auth middleware va provayder interfeyslari.
-- packages/contracts/src: ikkala ilova foydalanadigan identifikatorlar, turlar va API shakllari.
-- packages/lab-kits/src: fan modullari uchun yagona LabKit interfeysi.
-- infra/db/migrations: PostgreSQL sxemasi va keyingi migratsiyalar.
-- infra/video: video provayderi konfiguratsiyasi va webhook hujjatlari.
-- infra/sandbox: kiberxavfsizlik mashqlari uchun ajratilgan muhit.
+Har bir xona marshruti avval faol a’zolik va xona holatini tekshiradi. Teacher, assistant, owner dars/vazifa/test/material yaratadi. Student faqat e’lon qilingan vazifa va quizni ko‘radi; shaxsiy natijalari boshqa o‘quvchiga ko‘rinmaydi. Taklif kodi SHA-256 hash shaklida saqlanadi. Xona/dars/topshirish bog‘lanishlarida ID bir xonaga tegishliligi tekshiriladi.
 
-## Muhim ma’lumot oqimlari
+MongoDB Atlas transactionlari xona yaratish, taklif bilan qo‘shilish va submission/feedback oqimida ishlatiladi. Fayl yuklashda GridFS va metadata orasida xato bo‘lsa, GridFS fayli tozalanadi. Fayllar faqat API orqali xona a’zolariga uzatiladi.
 
-### Xonaga qo‘shilish
-Foydalanuvchi taklif kodini yuboradi → API xona holati va kodini tekshiradi → a’zolik yaratiladi → rolga mos ko‘rinish ochiladi. Kod bazada oddiy matn ko‘rinishida saqlanmaydi.
+## Hozirgi chegaralar
 
-### Jonli dars
-Ustoz dars sessiyasini boshlaydi → API video provayderida vaqtinchalik xona/token yaratadi → a’zolar roliga mos kiradi → sessiya yakunida davomat va ruxsat berilgan yozuv havolasi darsga ulanadi.
-
-### Materialdan test
-Ustoz material sahifalarini tanlaydi → matn ajratiladi → AI savol qoralamasi va manba bo‘lagini qaytaradi → ustoz tahrir va tasdiq qiladi → o‘quvchilar testni bajaradi → urinishlar va tahlil saqlanadi.
-
-### Laboratoriya
-Ustoz lab faoliyatini e’lon qiladi → o‘quvchi shaxsiy urinishni boshlaydi → modul natija va dalilni chiqaradi → API urinishni saqlaydi → ustoz ko‘rib fikr bildiradi. Kiberxavfsizlik moduli ajratilgan vaqtinchalik serverni ishga tushirib, tugagach to‘xtatadi.
-
-## Ruxsat va maxfiylik
-
-Xona a’zoligi barcha dars, chat, material va lab so‘rovlarida tekshiriladi. Vazifa e’loni guruhga ko‘rinadi; har bir o‘quvchining topshirig‘i va bahosi o‘sha o‘quvchi bilan ustozlarga ko‘rinadi. Ota-ona kirishi alohida bog‘lanish va rozilik orqali beriladi. Fayllar omborda maxfiy saqlanib, qisqa muddatli havola bilan ochiladi.
-
-## Ilk versiya chegarasi
-
-Birinchi ishlaydigan oqim: xona yaratish → a’zo qo‘shish → dars/material → jonli sessiya → bitta lab → vazifa → natija. Keyingi modullar shu modelga qo‘shiladi.
+Video API tayyor Zoom yoki Meet HTTPS havolasini saqlaydi, provayder sessiyasini avtomatik yaratmaydi. Davomat check-in/check-out bosilishiga tayanadi. Quiz hozir bitta urinishli va faqat multiple choice. Lab hozir Ohm qonuni bilan cheklangan. AI va kiber sandbox ulanmagan.

@@ -1,0 +1,65 @@
+import { GridFSBucket, MongoClient, ServerApiVersion } from "mongodb";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+
+export async function connectMongo(config) {
+  const client = new MongoClient(config.MONGODB_URI, {
+    serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true },
+    serverSelectionTimeoutMS: 10000,
+  });
+  try {
+    await client.connect();
+    const db = client.db(config.MONGODB_DB);
+    await db.command({ ping: 1 });
+    await ensureIndexes(db);
+    const bucket = new GridFSBucket(db, { bucketName: "material_files" });
+    const store = {
+      command: (command) => db.command(command),
+      collection: (name) => db.collection(name),
+      withTransaction: (work) => client.withSession((session) => session.withTransaction(() => work(session))),
+      uploadFile: async (id, buffer, filename, mimeType) => {
+        await pipeline(Readable.from(buffer), bucket.openUploadStreamWithId(id, filename, {
+          metadata: { mimeType },
+        }));
+      },
+      readFile: async (id) => {
+        const chunks = [];
+        for await (const chunk of bucket.openDownloadStream(id)) chunks.push(chunk);
+        return Buffer.concat(chunks);
+      },
+      deleteFile: (id) => bucket.delete(id),
+    };
+    return { client, db: store };
+  } catch (error) {
+    await client.close();
+    throw error;
+  }
+}
+
+export async function ensureIndexes(db) {
+  await Promise.all([
+    db.collection("users").createIndex({ emailLower: 1 }, { unique: true }),
+    db.collection("classroom_members").createIndex(
+      { classroomId: 1, userId: 1 },
+      { unique: true },
+    ),
+    db.collection("classroom_members").createIndex({ userId: 1, status: 1 }),
+    db.collection("classroom_invites").createIndex({ codeHash: 1 }, { unique: true }),
+    db.collection("classroom_invites").createIndex({ classroomId: 1, expiresAt: 1 }),
+    db.collection("classrooms").createIndex({ ownerId: 1, createdAt: -1 }),
+    db.collection("lessons").createIndex({ classroomId: 1, startsAt: 1 }),
+    db.collection("messages").createIndex({ classroomId: 1, createdAt: -1 }),
+    db.collection("resource_folders").createIndex({ classroomId: 1, parentId: 1 }),
+    db.collection("assets").createIndex({ classroomId: 1, folderId: 1, createdAt: -1 }),
+    db.collection("assignments").createIndex({ classroomId: 1, status: 1, createdAt: -1 }),
+    db.collection("submissions").createIndex({ assignmentId: 1, studentId: 1 }, { unique: true }),
+    db.collection("submission_revisions").createIndex({ submissionId: 1, version: 1 }, { unique: true }),
+    db.collection("feedback").createIndex({ submissionId: 1, version: 1 }, { unique: true }),
+    db.collection("quizzes").createIndex({ classroomId: 1, status: 1, createdAt: -1 }),
+    db.collection("quiz_attempts").createIndex({ quizId: 1, studentId: 1 }, { unique: true }),
+    db.collection("live_sessions").createIndex({ classroomId: 1, status: 1, startedAt: -1 }),
+    db.collection("attendance").createIndex({ sessionId: 1, userId: 1, leftAt: 1 }),
+    db.collection("lab_activities").createIndex({ classroomId: 1, createdAt: -1 }),
+    db.collection("lab_runs").createIndex({ labId: 1, studentId: 1, createdAt: -1 }),
+  ]);
+}

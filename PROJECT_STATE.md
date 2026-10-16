@@ -1,30 +1,32 @@
-# PROJECT_STATE — avval shu faylni o‘qing
+# PROJECT_STATE — yangi ishni shu fayldan boshlang
 
 Sana: 2026-10-16
-Bosqich: 1 — platforma, ma’lumot va papka tuzilmasi
-Mahsulot: SinfLab (ishchi nom). Ustoz boshqaradigan o‘quv xonasi ichida chat, jonli dars, material, vazifa, test va laboratoriya bir-biriga bog‘lanadi.
+Mahsulot: SinfLab — ustoz boshqaradigan o‘quv xonasi.
+Hozirgi bosqich: ishlaydigan backend MVP; React frontend hali boshlanmagan.
 
-## Oxirgi o‘zgarishlar
-- Hackaton-2026 papkasi va monorepo papkalari yaratildi.
-- Mahsulot oqimlari, arxitektura, data model va ish tartibi hujjatlashtirildi.
-- Dastlabki PostgreSQL sxemasi (26 jadval) va umumiy domen turlari qo‘shildi.
-- Papka ichida Git reposi boshlandi.
+## Qabul qilingan stack
+JavaScript ESM, Node.js 22+, Express 5, MongoDB Atlas (rasmiy driver), GridFS, Zod, bcryptjs, JWT. Frontend ReactJS/JavaScript bo‘ladi. docs/decisions/0002-js-mongo.md 0001 qarorini almashtirgan.
 
-## Qabul qilingan qarorlar
-- Birinchi foydalanuvchilar: ustoz va o‘quvchi; boshqaruv uchun xona egasi.
-- Asosiy obyekt: classroom. Dars, material, vazifa, test va lab shu xonaga tegishli.
-- Texnik yo‘l: React + TypeScript veb ilova, Node/Express + TypeScript API, PostgreSQL, fayllar uchun object storage.
-- Video va AI xizmatlari interfeys ortida turadi; aniq provayder keyingi bosqichda tanlanadi.
-- Kiberxavfsizlik mashqlari faqat ajratilgan vaqtinchalik muhitda ishlaydi.
+## Tayyor modullar
+- Auth: register/login/me, rate limit.
+- Xona: course/club, owner/teacher/assistant/student, taklif kodi, a’zolik.
+- Dars, chat, reply va soft delete.
+- Papka va 10 MB gacha material upload/download; fayl GridFS da.
+- Vazifa draft/publish, o‘quvchi submission revisionlari, feedback.
+- Quiz draft/publish, savol kaliti maxfiy, bir urinish, avtomatik baho.
+- Zoom/Meet HTTPS havolali live sessiya va check-in/out davomat.
+- Ohm qonuni lab mashqi, hisob va shaxsiy urinishlar.
+- O‘quvchi progress: qoldirilgan live dars, vazifa, quiz va takrorlash.
 
-## Tekshirildi
-- Barcha hujjat va papkalar yaratildi.
-- TypeScript turlari Node sintaksis tekshiruvidan o‘tdi.
-- SQL dagi 26 jadval va 56 ta REFERENCES bog‘lanishida yetishmayotgan yoki takrorlangan jadval topilmadi.
-- SQL hali haqiqiy PostgreSQL da bajarilmadi.
+## Tekshiruv
+npm run test:api: 19/19 HTTP test o‘tdi. Testlar xotira DB adapteriga ulanadi va asosiy rol/maxfiylik oqimlarini tekshiradi. MongoDB Atlas bilan haqiqiy ulanish, GridFS va transactionlar hali smoke testdan o‘tmagan — URI yo‘q. Video xona yaratish faqat tayyor tashqi havola orqali; AI va cyber sandbox ulanmagan.
+
+## Muhim fayllar
+docs/BACKEND_PLAN.md — reja/holat; docs/API.md — marshrutlar; docs/ARCHITECTURE.md — kod tuzilishi; docs/DATA_MODEL.md — MongoDB collectionlari; README.md — ishga tushirish. apps/api/.env.example konfiguratsiya namunasi. .env Gitga kirmaydi.
 
 ## Keyingi aniq ish
-2-bosqich: ishlaydigan minimal ilovani o‘rnatish; kirish, xona yaratish, taklif kodi, rol va a’zolik oqimini frontend/API/bazaga ulash. Avval migratsiyani haqiqiy PostgreSQL da bajarib tekshirish. Bosqich tugagach shu faylni yangilash.
+1. Atlas URI mavjud bo‘lganda haqiqiy DB smoke testini bajarish; ayniqsa GridFS va transaction.
+2. ReactJS/Vite frontendni API ga ulab demo oqimini qurish.
+3. Keyin AI savol qoralamasi, video provayder integratsiyasi va kengroq progress modullari.
 
-## Ish qoidasi
-Har yangi ishni shu faylni o‘qishdan boshlang. Ish oxirida oxirgi o‘zgarishlar, tekshiruv va keyingi qadamni yangilang. Shu tariqa avvalgi ishni qayta o‘rganish shart bo‘lmaydi.
+Har ishning boshida shu faylni o‘qing; tugaganda oxirgi o‘zgarish va test natijasini yangilang.
