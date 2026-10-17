@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, BookOpen, CalendarDays, CheckCircle2, ClipboardList, Copy, FlaskConical, Hash, MessageCircle, Radio, Target, Users } from "lucide-react";
 import { api, errorText } from "../lib/api.js";
 import { Badge, Button, EmptyState, Modal, Panel, SectionHeading, Select } from "../components/ui.jsx";
@@ -10,8 +10,9 @@ import MembersTab from "./room/MembersTab.jsx";
 import AssignmentsTab from "./room/AssignmentsTab.jsx";
 import QuizzesTab from "./room/QuizzesTab.jsx";
 import LiveTab from "./room/LiveTab.jsx";
-import LabsTab from "./room/LabsTab.jsx";
 import ProgressTab from "./room/ProgressTab.jsx";
+
+const LabsTab = lazy(() => import("./room/LabsTab.jsx"));
 
 const roleName = { owner: "Xona egasi", teacher: "Ustoz", assistant: "Yordamchi ustoz", student: "O‘quvchi" };
 
@@ -25,9 +26,10 @@ export default function RoomPage({ session, roomId, tab, navigate, notify, demoM
   const [inviteRole, setInviteRole] = useState("student");
   const [invite, setInvite] = useState(null);
   const [busy, setBusy] = useState(false);
+  const loadedRoomId = useRef(null);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
+    if (loadedRoomId.current !== roomId) setLoading(true);
     setError("");
     try {
       const prefix = "/classrooms/" + roomId;
@@ -41,6 +43,7 @@ export default function RoomPage({ session, roomId, tab, navigate, notify, demoM
         api(prefix + "/members", { token: session.token }),
       ]);
       setRoom(results[0].classroom);
+      loadedRoomId.current = roomId;
       setData({ lessons: results[1].lessons, assignments: results[2].assignments, quizzes: results[3].quizzes, sessions: results[4].sessions, labs: results[5].labs, members: results[6].members });
       if (results[0].classroom.role === "student") {
         const summary = await api(prefix + "/my-progress", { token: session.token });
@@ -126,7 +129,7 @@ export default function RoomPage({ session, roomId, tab, navigate, notify, demoM
     {tab === "assignments" ? <AssignmentsTab room={room} assignments={data.assignments} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /> : null}
     {tab === "quizzes" ? <QuizzesTab room={room} quizzes={data.quizzes} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /> : null}
     {tab === "live" ? <LiveTab room={room} sessions={data.sessions} lessons={data.lessons} session={session} onSessionChange={updateLiveSession} notify={notify} demoMode={demoMode} /> : null}
-    {tab === "labs" ? <LabsTab room={room} labs={data.labs} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /> : null}
+    {tab === "labs" ? <Suspense fallback={<Panel><p className="muted">Laboratoriya yuklanmoqda...</p></Panel>}><LabsTab room={room} labs={data.labs} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /></Suspense> : null}
     {tab === "progress" && !staff ? <ProgressTab progress={progress} navigate={navigate} room={room} session={session} /> : null}
     {tab === "chat" ? <ChatTab room={room} members={data.members} session={session} notify={notify} /> : null}
     {tab === "materials" ? <MaterialsTab room={room} session={session} notify={notify} /> : null}

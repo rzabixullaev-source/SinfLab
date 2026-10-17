@@ -23,6 +23,7 @@ export default function App() {
   const [rooms, setRooms] = useState([]);
   const [route, setRoute] = useState(currentRoute);
   const [demoMode, setDemoMode] = useState(false);
+  const [entryRole, setEntryRole] = useState(() => localStorage.getItem("sinflab.entryRole") === "student" ? "student" : "teacher");
   const [modal, setModal] = useState(null);
   const [modalBusy, setModalBusy] = useState(false);
   const [modalError, setModalError] = useState("");
@@ -98,7 +99,7 @@ export default function App() {
     return () => { active = false; };
   }, [session?.token]);
 
-  async function authenticate(mode, values) {
+  async function authenticate(mode, values, role = "teacher") {
     const path = mode === "register" ? "/auth/register" : "/auth/login";
     const body = mode === "register"
       ? { displayName: values.displayName, email: values.email, password: values.password }
@@ -107,6 +108,7 @@ export default function App() {
     const next = { token: data.token, user: data.user };
     saveSession(next);
     setSession(next);
+    setEntryRole(role);
     window.location.hash = "/";
     setToast("Xush kelibsiz, " + data.user.displayName.split(" ")[0] + "!");
   }
@@ -171,7 +173,7 @@ export default function App() {
       <header className="topbar"><div className="topbar-left"><button className="menu-button icon-button" onClick={() => setNavOpen(true)} aria-label="Menyuni ochish"><Menu size={21} /></button><span className="topbar-breadcrumb">SinfLab</span><span className="crumb-divider">/</span><strong>{selectedRoom?.name || "Bosh sahifa"}</strong></div><div className="topbar-right">{demoMode ? <span className="demo-pill">DEMO MUHIT</span> : null}<div className="live-alert-wrap"><button className="live-alert-button" aria-label={"Jonli dars xabarlari: " + liveAlerts.length} onClick={() => setAlertsOpen(!alertsOpen)}><Bell size={18} />{liveAlerts.length ? <span>{liveAlerts.length}</span> : null}</button>{alertsOpen ? <div className="live-alert-popover"><strong>Jonli dars xabarlari</strong>{liveAlerts.length ? liveAlerts.map((item) => <button key={item.session.id} onClick={() => { navigate(item.session.classroomId, "live"); setAlertsOpen(false); }}><Radio size={17} /><span><b>{item.session.title}</b><small>{item.classroomName} guruhida dars boshlandi</small></span><ArrowRight size={15} /></button>) : <p>Hozir jonli dars yo‘q.</p>}</div> : null}</div><span className="topbar-role"><UserRound size={15} /> {selectedRoom?.role === "student" ? "O‘quvchi" : selectedRoom ? "Ustoz" : "Profil"}</span><button className="topbar-avatar" onClick={logout} title="Hisobdan chiqish">{initials(session.user.displayName)}</button></div></header>
       <main className="main-content">{route.roomId
         ? <RoomPage key={route.roomId} session={session} roomId={route.roomId} tab={route.tab} navigate={(tab) => navigate(route.roomId, tab)} notify={setToast} refreshRooms={refreshRooms} demoMode={demoMode} />
-        : <Dashboard session={session} rooms={rooms} onOpenRoom={navigate} onCreate={() => openModal("create")} onJoin={() => openModal("join")} />}
+        : <Dashboard session={session} rooms={rooms} entryRole={entryRole} onOpenRoom={navigate} onCreate={() => openModal("create")} onJoin={() => openModal("join")} />}
       </main>
     </div>
 

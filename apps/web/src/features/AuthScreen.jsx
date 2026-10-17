@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Atom, BookOpenCheck, CirclePlay, Layers3, ShieldCheck } from "lucide-react";
+import { ArrowRight, Atom, BookOpenCheck, CirclePlay, GraduationCap, Layers3, ShieldCheck, Users } from "lucide-react";
 import { Button, Field } from "../components/ui.jsx";
 import { errorText } from "../lib/api.js";
 
@@ -13,13 +13,14 @@ export default function AuthScreen({ onAuthenticate, demoMode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [values, setValues] = useState({ displayName: "", email: "", password: "" });
+  const [entryRole, setEntryRole] = useState(() => localStorage.getItem("sinflab.entryRole") === "student" ? "student" : "teacher");
 
   async function submit(event, override) {
     event?.preventDefault();
     setError("");
     setBusy(true);
     try {
-      await onAuthenticate(override ? "login" : mode, override || values);
+      await onAuthenticate(override ? "login" : mode, override || values, entryRole);
     } catch (cause) {
       setError(errorText(cause));
     } finally {
@@ -48,8 +49,13 @@ export default function AuthScreen({ onAuthenticate, demoMode }) {
       <div className="auth-form-wrap">
         <div className="auth-mobile-brand"><span className="brand-mark"><Atom size={20} /></span> SinfLab</div>
         <span className="eyebrow">O‘QUV MUHITINGIZGA XUSH KELIBSIZ</span>
+        <div className="auth-role-picker" role="group" aria-label="Kirish yo‘nalishi">
+          <button type="button" className={entryRole === "teacher" ? "active" : ""} aria-pressed={entryRole === "teacher"} onClick={() => { setEntryRole("teacher"); localStorage.setItem("sinflab.entryRole", "teacher"); }}><GraduationCap size={20} /><span><strong>Ustoz sifatida</strong><small>Guruh yarating</small></span></button>
+          <button type="button" className={entryRole === "student" ? "active" : ""} aria-pressed={entryRole === "student"} onClick={() => { setEntryRole("student"); localStorage.setItem("sinflab.entryRole", "student"); }}><Users size={20} /><span><strong>O‘quvchi sifatida</strong><small>Kod bilan qo‘shiling</small></span></button>
+        </div>
+        <p className="auth-role-hint">Guruhdagi haqiqiy huquq taklif kodi yoki xona egasi orqali belgilanadi.</p>
         <h2>{mode === "login" ? "Hisobingizga kiring" : "Hisob yarating"}</h2>
-        <p className="auth-subtitle">{mode === "login" ? "Davom etish uchun ma’lumotlaringizni kiriting." : "Birinchi o‘quv xonangizga bir qadam qoldi."}</p>
+        <p className="auth-subtitle">{mode === "login" ? "Davom etish uchun ma’lumotlaringizni kiriting." : "Birinchi o‘quv xonangizga bir qadam qoldi."} {entryRole === "student" ? "Kirgach ustoz yuborgan kodni kiritasiz." : "Kirgach o‘quv guruhini yaratasiz."}</p>
         <form onSubmit={submit} className="auth-form">
           {mode === "register" ? <Field label="Ism va familiya" value={values.displayName} onChange={(event) => setValues({ ...values, displayName: event.target.value })} placeholder="Masalan, Dilshod Karimov" minLength={2} required autoComplete="name" /> : null}
           <Field label="Email manzil" type="email" value={values.email} onChange={(event) => setValues({ ...values, email: event.target.value })} placeholder="ism@example.com" required autoComplete="email" />

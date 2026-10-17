@@ -1,5 +1,9 @@
 # PROJECT_STATE — yangi ishni shu fayldan boshlang
 
+## Oxirgi o'zgarish — 2026-10-18 (mobil, doska, laboratoriya)
+
+Mobil va desktop auth ekraniga ustoz/o'quvchi kirish yo'nalishi qo'shildi; bu guruhdagi real huquqni o'zgartirmaydi. Jonli WebRTC darsga ustoz tahrirlaydigan, o'quvchilar ko'radigan SVG doska qo'shildi: qalam, chiziq, doira, to'rtburchak, matn, o'chirish, katakka yopish, tanlash, surish, tekislash, teng masofa, ortga qaytarish. Doska WebSocket orqali sinxronlashadi va live_sessions hujjatida saqlanadi. Laboratoriya studiyasiga Ohmga qo'shimcha fizikadagi mayatnik, kimyodagi kislota-asos titrlashi, biologiyadagi osmos va matematikadagi chiziqli funksiya qo'shildi. Fizika mayatnigi va kimyo titrlashi Three.js WebGL sahnasida ko'rinadi; natijalar serverda hisoblanadi. Lab bo'limi alohida chunkda yuklanadi. Bir xonadagi ma'lumotlar yangilanganda lab tanlovi saqlanadi. `npm run test:api`: 22/22 o'tdi; `npm run build:web` o'tdi. Demo brauzerda ustoz kirishi, tajriba yaratish, mayatnik/kimyo 3D ko'rinishi va jonli dars doskasi ko'rildi. Kamera ruxsati, haqiqiy ikki qurilmali doska va mobil viewport qo'lda tekshirilmagan.
+
 ## Oxirgi o'zgarish — 2026-10-18
 
 Vercel frontend login/register so'rovlarini o'zining `/api` manziliga yuborib 404 olayotgani aniqlandi. Railway API `/health` va `/ready` 200 qaytardi, noto'g'ri login 401 JSON qaytardi; ammo CORS `localhost`ga ruxsat bergan. Frontend production HTTP va WebSocket manzillari Railway API originiga yo'naltirildi (`VITE_API_ORIGIN` bilan almashtirish mumkin). Backend production CORS defaulti Vercel originiga moslandi. `npm run test:api`: 21/21 o'tdi; `npm run build:web` o'tdi va build faylida Railway origin hamda WebSocket yo'li borligi tekshirildi. `.env` Git tomonidan ignore qilinadi.

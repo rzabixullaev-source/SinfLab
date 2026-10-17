@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Hand, Maximize2, Mic, MicOff, Minimize2, Radio, Video, VideoOff } from "lucide-react";
 import { api, errorText, liveSignalUrl } from "../../lib/api.js";
 import { Badge, Button } from "../../components/ui.jsx";
+import LiveBoard from "./LiveBoard.jsx";
 
 const handText = {
   raised: "Qo‘l ko‘tarilgan", approved: "Gapirishga ruxsat berilgan",
@@ -35,6 +36,7 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
   const [fullScreen, setFullScreen] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
   const [error, setError] = useState("");
+  const [board, setBoard] = useState([]);
 
   const refreshHands = useCallback(async () => {
     if (item.status !== "live") return;
@@ -142,6 +144,7 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
   async function handleSignal(message) {
     if (message.type === "joined") {
       setConnected(true);
+      setBoard(message.board ?? []);
       if (host) {
         if (item.status === "preparing") {
           const result = await api(prefix + "/activate", { method: "POST", token: session.token });
@@ -151,6 +154,8 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
         notify("Kamera darsi boshlandi. Guruh o‘quvchilariga xabar yuborildi.");
       } else notify("Kamera darsiga qo‘shildingiz.");
       await api(prefix + "/check-in", { method: "POST", token: session.token }).catch(() => {});
+    } else if (message.type === "board-update") {
+      setBoard(message.elements ?? []);
     } else if (message.type === "peer-joined" && host && !message.host) {
       await offerTo(message.userId);
     } else if (message.type === "peer-left") {
@@ -308,6 +313,7 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
         {host ? <><Button variant="secondary" onClick={() => { const track = localStreamRef.current?.getVideoTracks()[0]; if (track) { track.enabled = !track.enabled; setVideoOn(track.enabled); } }}>{videoOn ? <VideoOff size={17} /> : <Video size={17} />}{videoOn ? "Kamerani o‘chirish" : "Kamerani yoqish"}</Button><Button variant={micOn ? "gold" : "secondary"} onClick={() => { const track = localStreamRef.current?.getAudioTracks()[0]; if (track) { track.enabled = !track.enabled; setMicOn(track.enabled); } }}>{micOn ? <Mic size={17} /> : <MicOff size={17} />}{micOn ? "Mikrofonni o‘chirish" : "Mikrofonni yoqish"}</Button></> : <><Button variant={micOn ? "gold" : "secondary"} onClick={toggleStudentMic} disabled={myHand?.status !== "approved" || busy || !micSenderRef.current}>{micOn ? <Mic size={17} /> : <MicOff size={17} />}{micOn ? "Mikrofonni o‘chirish" : "Mikrofonni yoqish"}</Button><Button variant="secondary" onClick={leave}>Darsdan chiqish</Button></>}
       </>}{host ? <Button variant="secondary" onClick={finish} loading={busy}>Darsni yakunlash</Button> : null}
     </>}</div>
+    <LiveBoard elements={board} connected={connected} canEdit={host && connected && item.status !== "ended"} onChange={(elements) => { setBoard(elements); signal({ type: "board-update", elements }); }} />
     {item.status === "live" ? <div className="zoom-hand-area">{host ? <><h4><Hand size={17} /> Qo‘l ko‘targanlar</h4>{hands.filter((hand) => ["raised", "approved"].includes(hand.status)).length ? hands.filter((hand) => ["raised", "approved"].includes(hand.status)).map((hand) => <div className="zoom-hand-row" key={hand.studentId}><span><strong>{hand.displayName}</strong><small>{handText[hand.status]}</small></span><div className="inline-actions">{hand.status === "raised" ? <><Button onClick={() => decide(hand, "approve")} disabled={busy}>Ruxsat berish</Button><Button variant="secondary" onClick={() => decide(hand, "deny")} disabled={busy}>Rad etish</Button></> : <Button variant="secondary" onClick={() => decide(hand, "revoke")} disabled={busy}>Ruxsatni qaytarish</Button>}</div></div>) : <p className="muted">Hozircha hech kim qo‘l ko‘tarmagan.</p>}</> : student ? <><h4><Hand size={17} /> Gapirish uchun qo‘l ko‘taring</h4><p className="muted">Ustoz ruxsat bergach, mikrofonni o‘zingiz yoqasiz.</p><div className="inline-actions">{!["raised", "approved"].includes(myHand?.status) ? <Button onClick={() => changeHand("raise")} loading={busy}><Hand size={17} /> Qo‘l ko‘tarish</Button> : <Button variant="secondary" onClick={() => changeHand("lower")} loading={busy}>Qo‘lni tushirish</Button>}{myHand ? <Badge tone={myHand.status === "approved" ? "teal" : "gold"}>{handText[myHand.status]}</Badge> : null}</div></> : null}</div> : null}
   </section>;
 }

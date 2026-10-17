@@ -103,3 +103,57 @@ export const ohmsRunSchema = z.object({
   resistance: z.number().positive(),
   predictedCurrent: z.number().min(0),
 }).strict();
+
+export const pendulumLabSchema = z.object({
+  title: z.string().trim().min(3).max(160),
+  lessonId: z.string().regex(/^[a-f0-9]{24}$/).optional(),
+  minLength: z.number().min(0.2).max(2).default(0.3),
+  maxLength: z.number().min(0.5).max(3).default(2),
+  gravity: z.number().min(1).max(20).default(9.81),
+  tolerancePercent: z.number().min(1).max(30).default(5),
+}).strict().refine((value) => value.maxLength > value.minLength, "Maximum length must exceed minimum length");
+
+export const pendulumRunSchema = z.object({
+  length: z.number().min(0.2).max(3),
+  amplitudeDegrees: z.number().min(2).max(45),
+  predictedPeriod: z.number().positive(),
+}).strict();
+
+export const titrationLabSchema = z.object({
+  title: z.string().trim().min(3).max(160),
+  lessonId: z.string().regex(/^[a-f0-9]{24}$/).optional(),
+  acidMolarity: z.number().min(0.01).max(2).default(0.1),
+  acidVolumeMl: z.number().min(5).max(100).default(25),
+  baseMolarity: z.number().min(0.01).max(2).default(0.1),
+  maxBaseVolumeMl: z.number().min(5).max(200).default(100),
+  tolerancePh: z.number().min(0.1).max(2).default(0.5),
+}).strict();
+
+export const titrationRunSchema = z.object({
+  baseVolumeMl: z.number().min(0).max(200),
+  predictedPh: z.number().min(0).max(14),
+}).strict();
+
+export const osmosisLabSchema = z.object({
+  title: z.string().trim().min(3).max(160),
+  lessonId: z.string().regex(/^[a-f0-9]{24}$/).optional(),
+  insideSolutePercent: z.number().min(0).max(20).default(5),
+}).strict();
+
+export const osmosisRunSchema = z.object({
+  outsideSolutePercent: z.number().min(0).max(20),
+  predictedDirection: z.enum(["in", "out", "balanced"]),
+}).strict();
+
+export const linearLabSchema = z.object({
+  title: z.string().trim().min(3).max(160),
+  lessonId: z.string().regex(/^[a-f0-9]{24}$/).optional(),
+  slope: z.number().min(-10).max(10).default(2),
+  intercept: z.number().min(-20).max(20).default(1),
+  toleranceAbsolute: z.number().min(0.01).max(2).default(0.25),
+}).strict();
+
+export const linearRunSchema = z.object({
+  x: z.number().min(-10).max(10),
+  predictedY: z.number().min(-120).max(120),
+}).strict();

@@ -2,6 +2,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { authenticateToken } from "../auth/auth.js";
 import { classroomAccess } from "../../shared/access.js";
 import { parseObjectId } from "../../shared/ids.js";
+import { boardElementsSchema } from "./board.js";
 
 const PATH = "/api/v1/live-signal";
 
@@ -50,10 +51,24 @@ export function attachLiveSignaling(server, { db, config }) {
           room.set(identity.userId, socket);
           const peers = [...room.entries()].filter(([id]) => id !== identity.userId).map(([id, peer]) => ({ userId: id, name: peer.identity.name, host: peer.identity.host }));
           socket.identity = identity;
-          send(socket, { type: "joined", userId: identity.userId, host, peers });
+          send(socket, { type: "joined", userId: identity.userId, host, peers, board: session.board ?? [] });
           for (const [id, peer] of room) if (id !== identity.userId) send(peer, { type: "peer-joined", userId: identity.userId, name: identity.name, host });
         } catch {
           socket.close(1008, "Not allowed in this class");
+        }
+        return;
+      }
+
+      if (message?.type === "board-update") {
+        if (!identity.host) return;
+        const parsed = boardElementsSchema.safeParse(message.elements);
+        if (!parsed.success) return;
+        const sessionId = parseObjectId(identity.sessionId);
+        const active = await db.collection("live_sessions").findOne({ _id: sessionId });
+        if (!active || !["preparing", "live"].includes(active.status)) return;
+        await db.collection("live_sessions").updateOne({ _id: sessionId }, { $set: { board: parsed.data, boardUpdatedAt: new Date() } });
+        for (const peer of rooms.get(identity.sessionId)?.values() ?? []) {
+          if (peer !== socket) send(peer, { type: "board-update", elements: parsed.data });
         }
         return;
       }

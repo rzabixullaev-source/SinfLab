@@ -56,7 +56,7 @@ O‘quvchi quizni ko‘rganda correctIndex yuborilmaydi.
 
 - POST /classrooms/:id/live-sessions — lessonId, provider: zoom/meet/other, joinUrl (HTTPS).
 - POST /classrooms/:id/live-sessions/browser — brauzer kamera darsi; title, lessonId?. Zoom kalitlari kerak emas.
-- WebSocket /api/v1/live-signal — birinchi xabar `join` (token, classroomId, sessionId), keyin guruh ichidagi host/o‘quvchi WebRTC offer/answer/ICE signallari.
+- WebSocket /api/v1/live-signal — birinchi xabar `join` (token, classroomId, sessionId), keyin guruh ichidagi host/o‘quvchi WebRTC offer/answer/ICE signallari. `joined` doskaning saqlangan `board` elementlarini ham yuboradi. Faqat host `board-update` (`elements`) yubora oladi; server shakllarni tekshiradi, darsda saqlaydi va o‘quvchilarga uzatadi (120 tagacha element).
 - POST /classrooms/:id/live-sessions/zoom — ichki Zoom Video SDK xonasi; title, lessonId?. Ustoz uchun `preparing` holatida yaratiladi.
 - POST /classrooms/:id/live-sessions/:sessionId/zoom-token — guruh a’zosiga qisqa muddatli SDK token; xonani yaratgan ustozga host roli. SDK kalitlari bo‘lmasa 503.
 - POST /classrooms/:id/live-sessions/:sessionId/activate — xona yaratuvchi ustoz darsni boshlaydi.
@@ -68,9 +68,9 @@ O‘quvchi quizni ko‘rganda correctIndex yuborilmaydi.
 - POST /classrooms/:id/live-sessions/:sessionId/check-in va /check-out.
 - POST /classrooms/:id/live-sessions/:sessionId/end.
 - GET /classrooms/:id/live-sessions/:sessionId/attendance — ustoz.
-- POST /classrooms/:id/labs — title, lessonId?, maxVoltage?, minResistance?, maxResistance?, tolerancePercent?. Ohm qonuni mashqi.
+- POST /classrooms/:id/labs — `kind`, `title`, `lessonId?` va turiga mos parametrlar. Turlar: `physics-ohms-law` (maxVoltage, minResistance, maxResistance, tolerancePercent), `physics-pendulum` (minLength, maxLength, gravity, tolerancePercent), `chemistry-titration` (acidMolarity, acidVolumeMl, baseMolarity, maxBaseVolumeMl, tolerancePh), `biology-osmosis` (insideSolutePercent), `mathematics-linear` (slope, intercept, toleranceAbsolute). `kind` berilmasa eski Ohm turi ishlaydi.
 - GET /classrooms/:id/labs.
-- POST /classrooms/:id/labs/:labId/runs — voltage, resistance, predictedCurrent.
+- POST /classrooms/:id/labs/:labId/runs — turiga mos o‘quvchi urunishi: Ohm (`voltage`, `resistance`, `predictedCurrent`), mayatnik (`length`, `amplitudeDegrees`, `predictedPeriod`), titrlash (`baseVolumeMl`, `predictedPh`), osmos (`outsideSolutePercent`, `predictedDirection`: in/out/balanced), chiziqli funksiya (`x`, `predictedY`). Haqiqiy natija va to‘g‘rilik serverda hisoblanadi.
 - GET /classrooms/:id/labs/:labId/runs — o‘quvchi o‘zini, ustoz hammasini ko‘radi.
 - GET /classrooms/:id/my-progress — qoldirilgan jonli dars, vazifa, quiz va takrorlash ro‘yxati.
 

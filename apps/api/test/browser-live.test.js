@@ -65,6 +65,18 @@ test("browser camera class signals only between its host and students", async ()
     const answerReceived = messageFrom(hostSocket);
     studentSocket.send(JSON.stringify({ type: "answer", targetId: host.user.id, description: { type: "answer", sdp: "test-answer" } }));
     assert.equal((await answerReceived).description.sdp, "test-answer");
+    const board = [{ id: "shape-1", type: "rect", x: 40, y: 60, w: 160, h: 80, color: "#0F766E" }];
+    studentSocket.send(JSON.stringify({ type: "board-update", elements: board }));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    assert.equal((await db.collection("live_sessions").findOne({ _id: created.body.session.id })).board, undefined);
+    const boardReceived = messageFrom(studentSocket);
+    hostSocket.send(JSON.stringify({ type: "board-update", elements: board }));
+    assert.deepEqual((await boardReceived).elements, board);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    assert.deepEqual((await db.collection("live_sessions").findOne({ _id: created.body.session.id })).board, board);
+    hostSocket.send(JSON.stringify({ type: "board-update", elements: [{ ...board[0], text: "invalid" }] }));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    assert.deepEqual((await db.collection("live_sessions").findOne({ _id: created.body.session.id })).board, board);
     const raised = await requestJson(base, path + `/${sessionId}/hand/raise`, { method: "POST", token: student.token });
     assert.equal(raised.body.hand.status, "raised");
   } finally {

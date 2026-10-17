@@ -6,7 +6,7 @@ import { todayLabel } from "../lib/date.js";
 
 const firstName = (name) => name?.trim().split(/\s+/)[0] || "Do‘st";
 
-export default function Dashboard({ session, rooms, onOpenRoom, onCreate, onJoin }) {
+export default function Dashboard({ session, rooms, entryRole = "teacher", onOpenRoom, onCreate, onJoin }) {
   const [progress, setProgress] = useState(null);
   const studentRoom = useMemo(() => rooms.find((room) => room.role === "student"), [rooms]);
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function Dashboard({ session, rooms, onOpenRoom, onCreate, onJoin
     </div>
 
     <div className="dashboard-hero">
-      <div className="hero-content"><span className="hero-eyebrow"><span className="live-dot" /> BIR JOYDA, BIR MAQSADDA</span><h2>{studentRoom ? "Bugungi o‘qishni davom ettiring" : "Ta’limni tartib bilan boshqaring"}</h2><p>{studentRoom ? focus ? "Sizni kutayotgan navbatdagi ish tayyor. Davom etish uchun xonaga o‘ting." : "Darslar, vazifalar va laboratoriyalar bir joyda." : "Xonalarni yarating, darslarni rejalang va har bir o‘quvchining ishini kuzating."}</p><Button variant="gold" onClick={() => studentRoom ? onOpenRoom(studentRoom.id) : rooms[0] ? onOpenRoom(rooms[0].id) : onCreate()}>{rooms.length ? "Xonaga o‘tish" : "Birinchi xonani yaratish"}<ArrowRight size={17} /></Button></div>
+      <div className="hero-content"><span className="hero-eyebrow"><span className="live-dot" /> BIR JOYDA, BIR MAQSADDA</span><h2>{studentRoom ? "Bugungi o‘qishni davom ettiring" : entryRole === "student" && !rooms.length ? "Ustozingiz guruhiga qo‘shiling" : "Ta’limni tartib bilan boshqaring"}</h2><p>{studentRoom ? focus ? "Sizni kutayotgan navbatdagi ish tayyor. Davom etish uchun xonaga o‘ting." : "Darslar, vazifalar va laboratoriyalar bir joyda." : entryRole === "student" && !rooms.length ? "Ustoz yuborgan taklif kodini kiriting va darslarga qo‘shiling." : "Xonalarni yarating, darslarni rejalang va har bir o‘quvchining ishini kuzating."}</p><Button variant="gold" onClick={() => studentRoom ? onOpenRoom(studentRoom.id) : rooms[0] ? onOpenRoom(rooms[0].id) : entryRole === "student" ? onJoin() : onCreate()}>{rooms.length ? "Xonaga o‘tish" : entryRole === "student" ? "Kod bilan qo‘shilish" : "Birinchi xonani yaratish"}<ArrowRight size={17} /></Button></div>
       <div className="hero-visual" aria-hidden="true"><div className="hero-ring hero-ring-1" /><div className="hero-ring hero-ring-2" /><div className="hero-symbol"><GraduationCap size={60} strokeWidth={1.1} /></div><span className="hero-corner-label">SINF / LAB · 2026</span></div>
     </div>
 
