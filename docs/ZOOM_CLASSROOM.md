@@ -1,5 +1,7 @@
 # Zoom ichki darsi
 
+Zoom integratsiyasi keyingi bosqichga qoldirilgan. Hozir yangi darslar uchun brauzer kamera rejimi ishlatiladi (docs/CAMERA_CLASSROOM.md).
+
 Bu funksiya Zoom Video SDK orqali SinfLab ichida jonli xona ochadi. Oddiy Zoom Meeting kalitlari yoki mavjud Zoom meeting havolasi ichki media boshqaruvi uchun yetmaydi. Tayyor Zoom/Meet HTTPS havolasini qo‘shish alohida variant sifatida qolgan.
 
 ## Sozlash

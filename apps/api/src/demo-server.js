@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { config as loadDotEnv } from "dotenv";
 import { createApp } from "./app.js";
 import { memoryDb } from "../test/helpers.js";
+import { attachLiveSignaling } from "./modules/live/signaling.js";
 
 loadDotEnv({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 const db = memoryDb();
@@ -76,3 +77,4 @@ const server = app.listen(4000, "127.0.0.1", async () => {
     process.exitCode = 1;
   }
 });
+attachLiveSignaling(server, { db, config });

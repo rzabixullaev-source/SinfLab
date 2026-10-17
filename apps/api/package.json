@@ -9,7 +9,9 @@
     "start": "node src/server.js",
     "test": "node --test --experimental-test-isolation=none"
   },
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@sinflab/contracts": "file:../../packages/contracts",
     "bcryptjs": "^3.0.2",
@@ -20,6 +22,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^7.2.0",
+    "ws": "^8.22.0",
     "zod": "^4.1.11"
   }
 }

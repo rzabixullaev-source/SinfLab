@@ -16,27 +16,29 @@ export function issueToken(userId, secret) {
   });
 }
 
+export async function authenticateToken(db, config, token) {
+  if (!token) throw new HttpError(401, "UNAUTHORIZED", "Sign in required");
+  let payload;
+  try {
+    payload = jwt.verify(token, config.JWT_SECRET, {
+      algorithms: ["HS256"], issuer: "sinflab-api", audience: "sinflab-web",
+    });
+  } catch {
+    throw new HttpError(401, "INVALID_TOKEN", "Session is invalid or expired");
+  }
+  if (!/^[a-f0-9]{24}$/.test(payload.sub)) {
+    throw new HttpError(401, "INVALID_TOKEN", "Session is invalid");
+  }
+  const user = await db.collection("users").findOne({ _id: new ObjectId(payload.sub) });
+  if (!user) throw new HttpError(401, "INVALID_TOKEN", "User no longer exists");
+  return user;
+}
+
 export function requireAuth({ db, config }) {
   return async (request, _response, next) => {
     try {
       const token = bearerToken(request.headers.authorization);
-      if (!token) throw new HttpError(401, "UNAUTHORIZED", "Sign in required");
-      let payload;
-      try {
-        payload = jwt.verify(token, config.JWT_SECRET, {
-          algorithms: ["HS256"],
-          issuer: "sinflab-api",
-          audience: "sinflab-web",
-        });
-      } catch {
-        throw new HttpError(401, "INVALID_TOKEN", "Session is invalid or expired");
-      }
-      if (!/^[a-f0-9]{24}$/.test(payload.sub)) {
-        throw new HttpError(401, "INVALID_TOKEN", "Session is invalid");
-      }
-      const user = await db.collection("users").findOne({ _id: new ObjectId(payload.sub) });
-      if (!user) throw new HttpError(401, "INVALID_TOKEN", "User no longer exists");
-      request.user = user;
+      request.user = await authenticateToken(db, config, token);
       next();
     } catch (error) {
       next(error);

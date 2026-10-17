@@ -29,9 +29,9 @@ const handDecisionSchema = z.object({
   decision: z.enum(["approve", "deny", "revoke"]),
 }).strict();
 
-function requireZoomSession(item, allowPreparing = false) {
-  if (item.provider !== "zoom_video_sdk") {
-    throw new HttpError(400, "NOT_ZOOM_ROOM", "This is not a Zoom classroom session");
+function requireInteractiveSession(item, allowPreparing = false) {
+  if (!["zoom_video_sdk", "browser_webrtc"].includes(item.provider)) {
+    throw new HttpError(400, "NOT_INTERACTIVE_ROOM", "This is not an interactive classroom session");
   }
   if (item.status !== "live" && !(allowPreparing && item.status === "preparing")) {
     throw new HttpError(409, "SESSION_ENDED", "Live session has ended");
@@ -66,7 +66,7 @@ export function liveRouter({ db, config }) {
     const classroomIds = memberships.map((item) => item.classroomId);
     const [sessions, classrooms] = await Promise.all([
       db.collection("live_sessions").find({
-        classroomId: { $in: classroomIds }, provider: "zoom_video_sdk", status: "live",
+        classroomId: { $in: classroomIds }, provider: { $in: ["zoom_video_sdk", "browser_webrtc"] }, status: "live",
       }).toArray(),
       db.collection("classrooms").find({ _id: { $in: classroomIds }, status: "active" }).toArray(),
     ]);
@@ -76,7 +76,7 @@ export function liveRouter({ db, config }) {
     })) });
   });
 
-  router.post("/:classroomId/live-sessions/zoom", async (request, response) => {
+  async function createInteractive(request, response, provider) {
     const { classroomId, membership } = await classroomAccess(db, request.params.classroomId, request.user._id);
     requireTeachingRole(membership);
     const input = zoomRoomSchema.parse(request.body);
@@ -86,19 +86,27 @@ export function liveRouter({ db, config }) {
     }
     const item = {
       _id: new ObjectId(), classroomId, lessonId, title: input.title,
-      provider: "zoom_video_sdk", sessionName: "sinflab-" + randomBytes(18).toString("hex"),
+      provider, sessionName: "sinflab-" + randomBytes(18).toString("hex"),
       joinUrl: null, createdBy: request.user._id, status: "preparing",
       startedAt: null, endedAt: null, createdAt: new Date(),
     };
     await db.collection("live_sessions").insertOne(item);
     response.status(201).json({ session: publicSession(item) });
+  }
+
+  router.post("/:classroomId/live-sessions/browser", (request, response) => {
+    return createInteractive(request, response, "browser_webrtc");
+  });
+
+  router.post("/:classroomId/live-sessions/zoom", (request, response) => {
+    return createInteractive(request, response, "zoom_video_sdk");
   });
 
   router.post("/:classroomId/live-sessions/:sessionId/activate", async (request, response) => {
     const { classroomId, membership } = await classroomAccess(db, request.params.classroomId, request.user._id);
     requireTeachingRole(membership);
     const item = await sessionFor(db, classroomId, request.params.sessionId);
-    requireZoomSession(item, true);
+    requireInteractiveSession(item, true);
     if (!item.createdBy.equals(request.user._id)) throw new HttpError(403, "FORBIDDEN", "Only the room creator can start it");
     if (item.status === "live") return response.json({ session: publicSession(item) });
     const startedAt = new Date();
@@ -111,7 +119,8 @@ export function liveRouter({ db, config }) {
   router.post("/:classroomId/live-sessions/:sessionId/zoom-token", async (request, response) => {
     const { classroomId, membership } = await classroomAccess(db, request.params.classroomId, request.user._id);
     const item = await sessionFor(db, classroomId, request.params.sessionId);
-    requireZoomSession(item, membership.role !== "student" && item.createdBy.equals(request.user._id));
+    if (item.provider !== "zoom_video_sdk") throw new HttpError(400, "NOT_ZOOM_ROOM", "This is not a Zoom session");
+    requireInteractiveSession(item, membership.role !== "student" && item.createdBy.equals(request.user._id));
     if (!config.ZOOM_VIDEO_SDK_KEY || !config.ZOOM_VIDEO_SDK_SECRET) {
       throw new HttpError(503, "ZOOM_NOT_CONFIGURED", "Zoom Video SDK credentials are not configured");
     }
@@ -131,7 +140,7 @@ export function liveRouter({ db, config }) {
   router.get("/:classroomId/live-sessions/:sessionId/hand", async (request, response) => {
     const { classroomId, membership } = await classroomAccess(db, request.params.classroomId, request.user._id);
     const item = await sessionFor(db, classroomId, request.params.sessionId);
-    requireZoomSession(item);
+    requireInteractiveSession(item);
     if (membership.role === "student") {
       const hand = await db.collection("live_hands").findOne({ sessionId: item._id, studentId: request.user._id });
       return response.json({ hand: publicHand(hand, request.user.displayName) });
@@ -148,7 +157,7 @@ export function liveRouter({ db, config }) {
     const { classroomId, membership } = await classroomAccess(db, request.params.classroomId, request.user._id);
     if (membership.role !== "student") throw new HttpError(403, "FORBIDDEN", "Student access required");
     const item = await sessionFor(db, classroomId, request.params.sessionId);
-    requireZoomSession(item);
+    requireInteractiveSession(item);
     const collection = db.collection("live_hands");
     const current = await collection.findOne({ sessionId: item._id, studentId: request.user._id });
     if (current?.status === "raised" || current?.status === "approved") {
@@ -168,7 +177,7 @@ export function liveRouter({ db, config }) {
     const { classroomId, membership } = await classroomAccess(db, request.params.classroomId, request.user._id);
     if (membership.role !== "student") throw new HttpError(403, "FORBIDDEN", "Student access required");
     const item = await sessionFor(db, classroomId, request.params.sessionId);
-    requireZoomSession(item);
+    requireInteractiveSession(item);
     const hand = await db.collection("live_hands").findOne({ sessionId: item._id, studentId: request.user._id });
     if (!hand || !["raised", "approved"].includes(hand.status)) {
       throw new HttpError(409, "HAND_NOT_ACTIVE", "No active hand request");
@@ -182,7 +191,7 @@ export function liveRouter({ db, config }) {
     const { classroomId, membership } = await classroomAccess(db, request.params.classroomId, request.user._id);
     requireTeachingRole(membership);
     const item = await sessionFor(db, classroomId, request.params.sessionId);
-    requireZoomSession(item);
+    requireInteractiveSession(item);
     const input = handDecisionSchema.parse(request.body);
     if (!item.createdBy.equals(request.user._id)) {
       throw new HttpError(403, "FORBIDDEN", "Only the room host can decide hand requests");

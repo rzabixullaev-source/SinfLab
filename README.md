@@ -24,9 +24,10 @@ MongoDB Atlas URI ushbu repoda saqlanmaydi. Atlas bilan haqiqiy ulanish hali sin
 
 Ro‘yxatdan o‘tish → xona ochish → taklif bilan qo‘shilish → dars va material → Zoom/Meet havolali jonli sessiya va davomat → vazifa, topshirish, izoh, qayta topshirish → quiz → Ohm qonuni lab urinishlari → o‘quvchi progressi.
 
-Ichki Zoom darsi uchun Zoom Video SDK kalitlari kerak. Ustoz guruh sahifasida xona ochib, Zoomga ulanganda o‘quvchilarga platforma ichida xabar boradi. O‘quvchi qo‘l ko‘taradi; ustoz ruxsat berishi, rad etishi yoki qaytarib olishi mumkin. Tayyor tashqi Zoom/Meet havolasi varianti ham saqlangan. AI test yaratish, kiber sandbox va ota-ona kabineti keyingi bosqichlarda.
+Asosiy jonli dars brauzer kamerasi va WebRTC orqali ishlaydi; Zoom kalitlari kerak emas. Ustoz guruhda kamera darsini boshlab, o‘quvchilarga platforma ichida xabar yuboradi. O‘quvchi qo‘l ko‘taradi; ustoz ruxsat bergach o‘quvchi mikrofonini yoqadi. Tayyor tashqi Zoom/Meet havolasi ham saqlangan, Zoom Video SDK esa keyingi bosqich uchun kodda qoladi. AI test yaratish, kiber sandbox va ota-ona kabineti keyingi bosqichlarda.
 
 Zoom kalitlarini olish va demo cheklovlari: docs/ZOOM_CLASSROOM.md.
+Brauzer kamera darsi va uning tarmoq talablari: docs/CAMERA_CLASSROOM.md.
 
 ## Hujjatlar
 
@@ -38,4 +39,5 @@ Zoom kalitlarini olish va demo cheklovlari: docs/ZOOM_CLASSROOM.md.
 - docs/UI_UX.md — to‘q rangli frontend yo‘nalishi va ekranlar.
 - docs/FRONTEND_PLAN.md — frontend bosqichlari va tekshiruvlar.
 - docs/ZOOM_CLASSROOM.md — ichki Zoom darsi va demo sozlamalari.
+- docs/CAMERA_CLASSROOM.md — kalitlarsiz kamera darsi va WebRTC cheklovlari.
 - PROJECT_STATE.md — qisqa joriy holat; keyingi ishni shu fayldan boshlang.

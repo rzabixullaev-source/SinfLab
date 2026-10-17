@@ -55,6 +55,8 @@ O‘quvchi quizni ko‘rganda correctIndex yuborilmaydi.
 ## Jonli dars, lab, progress
 
 - POST /classrooms/:id/live-sessions — lessonId, provider: zoom/meet/other, joinUrl (HTTPS).
+- POST /classrooms/:id/live-sessions/browser — brauzer kamera darsi; title, lessonId?. Zoom kalitlari kerak emas.
+- WebSocket /api/v1/live-signal — birinchi xabar `join` (token, classroomId, sessionId), keyin guruh ichidagi host/o‘quvchi WebRTC offer/answer/ICE signallari.
 - POST /classrooms/:id/live-sessions/zoom — ichki Zoom Video SDK xonasi; title, lessonId?. Ustoz uchun `preparing` holatida yaratiladi.
 - POST /classrooms/:id/live-sessions/:sessionId/zoom-token — guruh a’zosiga qisqa muddatli SDK token; xonani yaratgan ustozga host roli. SDK kalitlari bo‘lmasa 503.
 - POST /classrooms/:id/live-sessions/:sessionId/activate — xona yaratuvchi ustoz darsni boshlaydi.
