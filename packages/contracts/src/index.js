@@ -1,4 +1,5 @@
 import { z } from "zod";
+export { studioTools, studioScenarios, studioById, studioInventory, studioSubjects, studioLabSchema, studioRunSchema, simulateStudio } from "./studio.js";
 
 export const registerSchema = z.object({
   displayName: z.string().trim().min(2).max(80),

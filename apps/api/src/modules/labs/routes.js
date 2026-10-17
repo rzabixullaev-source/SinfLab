@@ -4,6 +4,7 @@ import {
   linearLabSchema, linearRunSchema, ohmsLabSchema, ohmsRunSchema,
   osmosisLabSchema, osmosisRunSchema, pendulumLabSchema, pendulumRunSchema,
   titrationLabSchema, titrationRunSchema,
+  studioLabSchema, studioRunSchema, studioById, simulateStudio,
 } from "@sinflab/contracts";
 import { requireAuth } from "../auth/auth.js";
 import { classroomAccess, requireTeachingRole } from "../../shared/access.js";
@@ -16,10 +17,11 @@ const labSchemas = {
   "chemistry-titration": titrationLabSchema,
   "biology-osmosis": osmosisLabSchema,
   "mathematics-linear": linearLabSchema,
+  studio: studioLabSchema,
 };
 
-const configFields = ["maxVoltage", "minResistance", "maxResistance", "tolerancePercent", "minLength", "maxLength", "gravity", "acidMolarity", "acidVolumeMl", "baseMolarity", "maxBaseVolumeMl", "tolerancePh", "insideSolutePercent", "slope", "intercept", "toleranceAbsolute"];
-const runFields = ["voltage", "resistance", "predictedCurrent", "actualCurrent", "power", "length", "amplitudeDegrees", "predictedPeriod", "actualPeriod", "baseVolumeMl", "predictedPh", "actualPh", "outsideSolutePercent", "predictedDirection", "actualDirection", "x", "predictedY", "actualY"];
+const configFields = ["scenarioId", "maxVoltage", "minResistance", "maxResistance", "tolerancePercent", "minLength", "maxLength", "gravity", "acidMolarity", "acidVolumeMl", "baseMolarity", "maxBaseVolumeMl", "tolerancePh", "insideSolutePercent", "slope", "intercept", "toleranceAbsolute"];
+const runFields = ["scenarioId", "actions", "observation", "measurement", "score", "voltage", "resistance", "predictedCurrent", "actualCurrent", "power", "length", "amplitudeDegrees", "predictedPeriod", "actualPeriod", "baseVolumeMl", "predictedPh", "actualPh", "outsideSolutePercent", "predictedDirection", "actualDirection", "x", "predictedY", "actualY"];
 const pick = (item, fields) => Object.fromEntries(fields.filter((field) => item[field] !== undefined).map((field) => [field, item[field]]));
 
 function publicLab(lab) {
@@ -85,7 +87,21 @@ export function labsRouter({ db, config }) {
     const lab = await labFor(db, classroomId, request.params.labId);
     let input;
     let outcome;
-    if (lab.kind === "physics-ohms-law") {
+    if (lab.kind === "studio") {
+      input = studioRunSchema.parse(request.body);
+      const scenario = studioById[lab.scenarioId];
+      if (!scenario) throw new HttpError(400, "INVALID_SCENARIO", "Scenario is unavailable");
+      let simulated;
+      try { simulated = simulateStudio(scenario, input.actions); }
+      catch { throw new HttpError(400, "INVALID_LAB_ACTION", "Laboratory action is invalid"); }
+      outcome = {
+        scenarioId: lab.scenarioId,
+        observation: simulated.observation,
+        measurement: simulated.measurement,
+        score: simulated.score,
+        correct: simulated.correct,
+      };
+    } else if (lab.kind === "physics-ohms-law") {
       input = ohmsRunSchema.parse(request.body);
       if (input.voltage > lab.maxVoltage || input.resistance < lab.minResistance || input.resistance > lab.maxResistance) {
         throw new HttpError(400, "OUT_OF_RANGE", "Experiment parameters are outside teacher limits");

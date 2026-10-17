@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { memoryDb, requestJson, withServer } from "./helpers.js";
+import { simulateStudio, studioScenarios, studioTools } from "@sinflab/contracts";
 
 test("Ohm lab calculates current and isolates each student's run history", async () => {
   await withServer(memoryDb(), async (base) => {
@@ -86,5 +87,77 @@ test("pendulum, titration, osmosis and linear labs calculate and protect student
       assert.equal((await requestJson(base, runsPath, { token: outsider.token })).status, 404);
       assert.equal((await requestJson(base, runsPath, { token: student.token })).body.runs.length, 1);
     }
+  });
+});
+
+test("studio catalog contains ten runnable experiments per requested subject", () => {
+  for (const subject of ["chemistry", "physics", "biology", "cybersecurity"]) {
+    const group = studioScenarios.filter((item) => item.subject === subject);
+    assert.equal(group.length, 10);
+    for (const scenario of group) {
+      assert.ok(scenario.tools.every((tool) => Boolean(studioTools[tool])));
+      assert.ok(scenario.target.every((tool) => scenario.tools.includes(tool)));
+      const actions = scenario.target.map((itemId) => ({ type: "add", itemId, amount: 10 }));
+      assert.equal(simulateStudio(scenario, actions).correct, true, scenario.id);
+      assert.equal(simulateStudio(scenario, [{ type: "add", itemId: scenario.tools.find((item) => !scenario.target.includes(item)), amount: 10 }]).correct, false, scenario.id);
+    }
+  }
+  const neutralization = studioScenarios.find((item) => item.id === "chem-neutralization");
+  assert.equal(simulateStudio(neutralization, [
+    { type: "add", itemId: "hcl", amount: 10 },
+    { type: "add", itemId: "naoh", amount: 10 },
+  ]).measurement.value, 7);
+  assert.ok(simulateStudio(neutralization, [
+    { type: "add", itemId: "hcl", amount: 20 },
+    { type: "add", itemId: "naoh", amount: 10 },
+  ]).measurement.value < 7);
+  const freeMix = simulateStudio(neutralization, [
+    { type: "add", itemId: "vinegar", amount: 10 },
+    { type: "add", itemId: "bicarbonate", amount: 10 },
+  ]);
+  assert.equal(freeMix.reaction.effect, "gas");
+  assert.equal(freeMix.correct, false);
+});
+
+test("teacher assigns studio labs; students manipulate and their journals stay private", async () => {
+  await withServer(memoryDb(), async (base) => {
+    const register = async (name) => (await requestJson(base, "/auth/register", {
+      method: "POST", body: { displayName: name, email: `${name.toLowerCase()}@example.com`, password: "strong-pass-123" },
+    })).body;
+    const teacher = await register("StudioTeacher");
+    const student = await register("StudioStudent");
+    const other = await register("StudioOther");
+    const room = await requestJson(base, "/classrooms", { method: "POST", token: teacher.token, body: { name: "Studio room", mode: "course" } });
+    const roomId = room.body.classroom.id;
+    const invite = await requestJson(base, `/classrooms/${roomId}/invites`, { method: "POST", token: teacher.token, body: {} });
+    for (const learner of [student, other]) {
+      await requestJson(base, "/classrooms/join", { method: "POST", token: learner.token, body: { code: invite.body.invite.code } });
+    }
+    const path = `/classrooms/${roomId}/labs`;
+    for (const scenarioId of ["chem-neutralization", "phys-ramp", "bio-osmosis", "cyber-firewall"]) {
+      const scenario = studioScenarios.find((item) => item.id === scenarioId);
+      const created = await requestJson(base, path, {
+        method: "POST", token: teacher.token, body: { kind: "studio", scenarioId, title: scenario.title },
+      });
+      assert.equal(created.status, 201);
+      assert.equal(created.body.lab.scenarioId, scenarioId);
+      const runPath = `${path}/${created.body.lab.id}/runs`;
+      const actions = scenario.target.map((itemId) => ({ type: "add", itemId, amount: 10 }));
+      const result = await requestJson(base, runPath, { method: "POST", token: student.token, body: { actions } });
+      assert.equal(result.status, 201);
+      assert.equal(result.body.run.correct, true);
+      assert.equal(result.body.run.score, 100);
+      assert.ok(result.body.run.observation.length > 5);
+      assert.equal((await requestJson(base, runPath, { token: other.token })).body.runs.length, 0);
+      assert.equal((await requestJson(base, runPath, { token: teacher.token })).body.runs.length, 1);
+      assert.equal((await requestJson(base, runPath, {
+        method: "POST", token: student.token,
+        body: { actions: [{ type: "add", itemId: "unknown-tool", amount: 10 }] },
+      })).status, 400);
+    }
+    assert.equal((await requestJson(base, path, {
+      method: "POST", token: student.token,
+      body: { kind: "studio", scenarioId: "chem-neutralization", title: "Unauthorized" },
+    })).status, 403);
   });
 });

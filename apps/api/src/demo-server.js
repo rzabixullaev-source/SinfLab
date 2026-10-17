@@ -68,6 +68,14 @@ const server = app.listen(4000, "127.0.0.1", async () => {
     }, teacher.token);
     await call(root + "/quizzes/" + quiz.quiz.id + "/publish", {}, teacher.token);
     await call(root + "/labs", { title: "Virtual elektr zanjiri", lessonId: lesson.lesson.id }, teacher.token);
+    for (const [scenarioId, title] of [
+      ["chem-carbon-dioxide", "Sirka va soda reaksiyasi"],
+      ["phys-ramp", "Qiya tekislik sinovi"],
+      ["bio-osmosis", "Hujayra osmosi"],
+      ["cyber-firewall", "Tarmoq qoidasi sinovi"],
+    ]) {
+      await call(root + "/labs", { kind: "studio", scenarioId, title, lessonId: lesson.lesson.id }, teacher.token);
+    }
     console.log("SinfLab demo API: http://127.0.0.1:4000");
     console.log("Teacher: ustoz@sinflab.uz / Demo2026!");
     console.log("Student: oquvchi@sinflab.uz / Demo2026!");
