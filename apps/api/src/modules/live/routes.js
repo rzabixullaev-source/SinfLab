@@ -122,6 +122,7 @@ export function liveRouter({ db, config }) {
       role_type: host ? 1 : 0,
       tpc: item.sessionName, version: 1,
       user_key: String(request.user._id),
+      video_webrtc_mode: 1, audio_webrtc_mode: 1,
       iat: now, exp: now + 60 * 60 * 2,
     }, config.ZOOM_VIDEO_SDK_SECRET, { algorithm: "HS256" });
     response.json({ sessionName: item.sessionName, token, userName: request.user.displayName, host });

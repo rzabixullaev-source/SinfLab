@@ -1,7 +1,10 @@
 import express from "express";
+import { fileURLToPath } from "node:url";
+import { config as loadDotEnv } from "dotenv";
 import { createApp } from "./app.js";
 import { memoryDb } from "../test/helpers.js";
 
+loadDotEnv({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 const db = memoryDb();
 const config = {
   CORS_ORIGIN: "http://127.0.0.1:5173",

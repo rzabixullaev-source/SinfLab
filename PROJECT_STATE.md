@@ -2,6 +2,8 @@
 
 ## Oxirgi holat — 2026-10-17
 
+Zoom darsi kamerasi va to‘liq ekran: SDK videosi `video-player-container` ichida ko‘rsatiladi; ustoz uchun ulanishdan oldin mahalliy kamera sinovi, darsda kamera yoqish/o‘chirish va xonani to‘liq ekranga chiqarish qo‘shildi. Audio boshlanganda mikrofon jim turadi. JWT WebRTC audio/video rejimini so‘raydi. Demo server `apps/api/.env` dagi Zoom kalitlarini o‘qiydi. Kalitlar hozircha yo‘q, shuning uchun haqiqiy Zoom media ulanib sinovdan o‘tmagan. `node --test apps/api/test/zoom.test.js` va yakuniy `npm run build:web` o‘tdi. Mahalliy demo API qayta ishga tushirildi; frontend va API HTTP javobi tekshirildi.
+
 Ichki Zoom Video SDK darsi qo‘shildi. Ustoz tanlangan guruhda xona yaratadi, ulanishi bilan faqat shu guruhning faol o‘quvchilariga ilova ichida xabar boradi. O‘quvchi qo‘l ko‘taradi; xona yaratuvchisi ruxsat beradi, rad etadi yoki qaytaradi. Ustozning kamera va mikrofon boshqaruvi, o‘quvchining ruxsatdan keyingi mikrofoni va darsdan chiqishi UI da bor. SDK tokeni serverda imzolanadi; guruh/rol API da tekshiriladi. Kalitlarsiz demo xabar va qo‘l ko‘tarishni ko‘rsatadi, haqiqiy audio/video ishlamaydi. Sozlash: docs/ZOOM_CLASSROOM.md.
 
 `npm run test:api`: 20/20 o‘tdi. Yakuniy `npm run build:web` o‘tdi. Zoom Video SDK kalitlari va Atlas URI yo‘q; haqiqiy media/DB smoke testi qolgan.

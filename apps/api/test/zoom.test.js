@@ -58,6 +58,7 @@ test("Zoom classroom alert and hand approval stay inside the selected group", as
     })).status, 409);
     const hostToken = await requestJson(base, path + "/zoom-token", { method: "POST", token: teacher.token });
     assert.equal(jwt.verify(hostToken.body.token, config.ZOOM_VIDEO_SDK_SECRET).role_type, 1);
+    assert.equal(jwt.verify(hostToken.body.token, config.ZOOM_VIDEO_SDK_SECRET).video_webrtc_mode, 1);
     assert.equal((await requestJson(base, path + "/activate", { method: "POST", token: student.token })).status, 403);
     assert.equal((await requestJson(base, path + "/activate", { method: "POST", token: teacher.token })).body.session.status, "live");
     const alerts = await requestJson(base, "/classrooms/live-alerts", { token: student.token });
