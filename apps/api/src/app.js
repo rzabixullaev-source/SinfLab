@@ -28,6 +28,7 @@ export function createApp({ db, config }) {
     response.json({ status: "ready" });
   });
   app.use("/api/v1/auth", authRouter({ db, config }));
+  app.use("/api/v1/classrooms", liveRouter({ db, config }));
   app.use("/api/v1/classrooms", classroomsRouter({ db, config }));
   app.use("/api/v1/classrooms", lessonsRouter({ db, config }));
   app.use("/api/v1/classrooms", messagesRouter({ db, config }));
@@ -35,7 +36,6 @@ export function createApp({ db, config }) {
   app.use("/api/v1/classrooms", assignmentsRouter({ db, config }));
   app.use("/api/v1/classrooms", submissionsRouter({ db, config }));
   app.use("/api/v1/classrooms", quizzesRouter({ db, config }));
-  app.use("/api/v1/classrooms", liveRouter({ db, config }));
   app.use("/api/v1/classrooms", labsRouter({ db, config }));
   app.use("/api/v1/classrooms", progressRouter({ db, config }));
   app.use((_request, _response, next) => next(new HttpError(404, "NOT_FOUND", "Route not found")));

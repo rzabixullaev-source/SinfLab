@@ -55,6 +55,13 @@ O‘quvchi quizni ko‘rganda correctIndex yuborilmaydi.
 ## Jonli dars, lab, progress
 
 - POST /classrooms/:id/live-sessions — lessonId, provider: zoom/meet/other, joinUrl (HTTPS).
+- POST /classrooms/:id/live-sessions/zoom — ichki Zoom Video SDK xonasi; title, lessonId?. Ustoz uchun `preparing` holatida yaratiladi.
+- POST /classrooms/:id/live-sessions/:sessionId/zoom-token — guruh a’zosiga qisqa muddatli SDK token; xonani yaratgan ustozga host roli. SDK kalitlari bo‘lmasa 503.
+- POST /classrooms/:id/live-sessions/:sessionId/activate — xona yaratuvchi ustoz darsni boshlaydi.
+- GET /classrooms/live-alerts — o‘quvchining faol guruhlaridagi boshlangan Zoom darslari.
+- GET /classrooms/:id/live-sessions/:sessionId/hand — o‘quvchi o‘z so‘rovi, ustoz guruhdagi so‘rovlar ro‘yxati.
+- POST /classrooms/:id/live-sessions/:sessionId/hand/raise va /lower — o‘quvchi qo‘l ko‘taradi/tushiradi.
+- POST /classrooms/:id/live-sessions/:sessionId/hand/decision — xonani yaratgan ustoz `studentId` va `decision`: approve/deny/revoke yuboradi.
 - GET /classrooms/:id/live-sessions.
 - POST /classrooms/:id/live-sessions/:sessionId/check-in va /check-out.
 - POST /classrooms/:id/live-sessions/:sessionId/end.
@@ -67,4 +74,4 @@ O‘quvchi quizni ko‘rganda correctIndex yuborilmaydi.
 
 ## Chegara
 
-Atlas ulanmagan holda testlar xotira adapterida o‘tgan. Video havola tashqi Zoom/Meet sessiyasiga tegishli; API provayderda xona yaratmaydi. AI savol yaratish va cyber sandbox hali ulanmagan.
+Atlas ulanmagan holda testlar xotira adapterida o‘tgan. Ichki Zoom Video SDK uchun haqiqiy kalitlar va brauzer media sinovi hali kerak; tayyor havola oqimi alohida saqlangan. AI savol yaratish va cyber sandbox hali ulanmagan.

@@ -24,7 +24,9 @@ MongoDB Atlas URI ushbu repoda saqlanmaydi. Atlas bilan haqiqiy ulanish hali sin
 
 Ro‘yxatdan o‘tish → xona ochish → taklif bilan qo‘shilish → dars va material → Zoom/Meet havolali jonli sessiya va davomat → vazifa, topshirish, izoh, qayta topshirish → quiz → Ohm qonuni lab urinishlari → o‘quvchi progressi.
 
-Video xona provayderda avtomatik yaratilmaydi: ustoz tayyor HTTPS havola kiritadi. AI test yaratish, kiber sandbox va ota-ona kabineti keyingi bosqichlarda.
+Ichki Zoom darsi uchun Zoom Video SDK kalitlari kerak. Ustoz guruh sahifasida xona ochib, Zoomga ulanganda o‘quvchilarga platforma ichida xabar boradi. O‘quvchi qo‘l ko‘taradi; ustoz ruxsat berishi, rad etishi yoki qaytarib olishi mumkin. Tayyor tashqi Zoom/Meet havolasi varianti ham saqlangan. AI test yaratish, kiber sandbox va ota-ona kabineti keyingi bosqichlarda.
+
+Zoom kalitlarini olish va demo cheklovlari: docs/ZOOM_CLASSROOM.md.
 
 ## Hujjatlar
 
@@ -35,4 +37,5 @@ Video xona provayderda avtomatik yaratilmaydi: ustoz tayyor HTTPS havola kiritad
 - docs/ROADMAP.md — qolgan ishlar ketma-ketligi.
 - docs/UI_UX.md — to‘q rangli frontend yo‘nalishi va ekranlar.
 - docs/FRONTEND_PLAN.md — frontend bosqichlari va tekshiruvlar.
+- docs/ZOOM_CLASSROOM.md — ichki Zoom darsi va demo sozlamalari.
 - PROJECT_STATE.md — qisqa joriy holat; keyingi ishni shu fayldan boshlang.

@@ -1,45 +1,62 @@
-import { useState } from "react";
-import { CalendarDays, ExternalLink, Plus, Radio, Square } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ExternalLink, Plus, Radio, Users } from "lucide-react";
 import { api, errorText } from "../../lib/api.js";
 import { dateTimeLabel } from "../../lib/date.js";
 import { Badge, Button, EmptyState, Field, Modal, Panel, SectionHeading, Select } from "../../components/ui.jsx";
+import ZoomClassroom from "./ZoomClassroom.jsx";
 
-export default function LiveTab({ room, sessions, lessons, session, refresh, notify }) {
+export default function LiveTab({ room, sessions, lessons, session, onSessionChange, notify, demoMode }) {
   const staff = room.role !== "student";
   const prefix = "/classrooms/" + room.id + "/live-sessions";
+  const [rows, setRows] = useState(sessions);
+  const [selected, setSelected] = useState(null);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ lessonId: "", provider: "meet", joinUrl: "" });
+  const [kind, setKind] = useState("zoom");
+  const [form, setForm] = useState({ title: "", lessonId: "", provider: "meet", joinUrl: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [joined, setJoined] = useState({});
+  useEffect(() => { setRows(sessions); }, [sessions]);
 
   async function create(event) {
     event.preventDefault(); setBusy(true); setError("");
-    try { await api(prefix, { method: "POST", token: session.token, body: form }); setOpen(false); setForm({ lessonId: "", provider: "meet", joinUrl: "" }); await refresh(); notify("Jonli dars boshlandi."); }
-    catch (cause) { setError(errorText(cause)); }
+    try {
+      const result = kind === "zoom"
+        ? await api(prefix + "/zoom", {
+          method: "POST", token: session.token,
+          body: { title: form.title, lessonId: form.lessonId || undefined },
+        })
+        : await api(prefix, {
+          method: "POST", token: session.token,
+          body: { lessonId: form.lessonId, provider: form.provider, joinUrl: form.joinUrl },
+        });
+      setOpen(false); setForm({ title: "", lessonId: "", provider: "meet", joinUrl: "" });
+      onSessionChange(result.session);
+      setSelected(result.session.id);
+      notify(kind === "zoom" ? "Zoom dars xonasi tayyor. Ulansangiz guruhga xabar boradi." : "Uchrashuv havolasi e’lon qilindi.");
+    } catch (cause) { setError(errorText(cause)); }
     finally { setBusy(false); }
   }
-  async function finish(item) {
+  async function finishExternal(item) {
     setBusy(true);
-    try { await api(prefix + "/" + item.id + "/end", { method: "POST", token: session.token }); await refresh(); notify("Jonli dars yakunlandi."); }
-    catch (cause) { notify(errorText(cause)); }
+    try {
+      const result = await api(prefix + "/" + item.id + "/end", { method: "POST", token: session.token });
+      onSessionChange(result.session);
+      notify("Jonli dars yakunlandi.");
+    } catch (cause) { notify(errorText(cause)); }
     finally { setBusy(false); }
   }
-  async function enter(item) {
+  async function checkIn(item) {
     try {
       await api(prefix + "/" + item.id + "/check-in", { method: "POST", token: session.token });
-      setJoined({ ...joined, [item.id]: true });
       notify("Qatnashish qayd qilindi.");
     } catch (cause) { notify(errorText(cause)); }
   }
-  async function leave(item) {
-    setBusy(true);
-    try { await api(prefix + "/" + item.id + "/check-out", { method: "POST", token: session.token }); setJoined({ ...joined, [item.id]: false }); notify("Darsdan chiqish qayd qilindi."); }
-    catch (cause) { notify(errorText(cause)); }
-    finally { setBusy(false); }
-  }
-  return <div className="module-page page-enter"><SectionHeading eyebrow="ONLAYN DARSLAR" title="Jonli dars" description="Zoom yoki Google Meet havolasi orqali uchrashing. Qatnashish platformada qayd etiladi." action={staff ? <Button onClick={() => { setError(""); setOpen(true); }} disabled={!lessons.length}><Plus size={17} /> Dars boshlash</Button> : null} />
-    {sessions.length ? <div className="lesson-list">{[...sessions].reverse().map((item) => <Panel className="live-session-card" key={item.id}><span className="live-session-icon"><Radio size={21} /></span><div className="live-session-copy"><div className="list-heading"><h3>{lessons.find((lesson) => lesson.id === item.lessonId)?.title || "Jonli dars"}</h3><Badge tone={item.status === "live" ? "gold" : "neutral"}>{item.status === "live" ? "JONLI" : "YAKUNLANGAN"}</Badge></div><p>{item.provider === "meet" ? "Google Meet" : item.provider === "zoom" ? "Zoom" : "Boshqa xizmat"} · {dateTimeLabel(item.startedAt)}</p></div>{item.status === "live" ? staff ? <div className="inline-actions"><a className="btn btn-secondary" href={item.joinUrl} target="_blank" rel="noopener noreferrer">Uchrashuv <ExternalLink size={16} /></a><Button variant="secondary" onClick={() => finish(item)} loading={busy}><Square size={15} /> Yakunlash</Button></div> : <div className="inline-actions">{joined[item.id] ? <Button variant="secondary" onClick={() => leave(item)} loading={busy}>Chiqishni qayd etish</Button> : null}<a className="btn btn-primary" href={item.joinUrl} target="_blank" rel="noopener noreferrer" onClick={() => enter(item)}><ExternalLink size={16} /> Darsga kirish</a></div> : null}</Panel>)}</div> : <Panel><EmptyState icon={Radio} title="Jonli dars yo‘q" description={staff ? "Avval dars yarating, so‘ng uchrashuv havolasini biriktiring." : "Ustoz jonli darsni boshlaganda bu yerda ko‘rinadi."} /></Panel>}
-    {open ? <Modal title="Jonli dars boshlash" description="Uchrashuv havolasi HTTPS bilan boshlanishi kerak." onClose={() => setOpen(false)}><form className="modal-form" onSubmit={create}><Select label="Dars" value={form.lessonId} onChange={(event) => setForm({ ...form, lessonId: event.target.value })} required><option value="">Dars tanlang</option>{lessons.map((lesson) => <option value={lesson.id} key={lesson.id}>{lesson.title}</option>)}</Select><Select label="Uchrashuv xizmati" value={form.provider} onChange={(event) => setForm({ ...form, provider: event.target.value })}><option value="meet">Google Meet</option><option value="zoom">Zoom</option><option value="other">Boshqa</option></Select><Field label="Uchrashuv havolasi" type="url" value={form.joinUrl} onChange={(event) => setForm({ ...form, joinUrl: event.target.value })} placeholder="https://..." pattern="https://.*" required />{error ? <div className="form-error">{error}</div> : null}<div className="modal-actions"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Bekor qilish</Button><Button type="submit" loading={busy}><CalendarDays size={16} /> Boshlash</Button></div></form></Modal> : null}
+
+  const active = rows.find((item) => item.id === selected);
+  return <div className="module-page page-enter">
+    <SectionHeading eyebrow="ONLAYN DARSLAR" title="Jonli dars" description="Ustoz tanlangan guruh uchun dars ochadi. O‘quvchilar xabar oladi va gapirish uchun qo‘l ko‘taradi." action={staff ? <Button onClick={() => { setKind("zoom"); setError(""); setOpen(true); }}><Plus size={17} /> Jonli dars ochish</Button> : null} />
+    {rows.length ? <div className="live-room-layout"><div className="item-list">{[...rows].reverse().map((item) => <button key={item.id} className={"item-card " + (selected === item.id ? "selected" : "")} onClick={() => setSelected(item.id)}><span className="item-card-icon"><Radio size={20} /></span><span className="item-card-copy"><strong>{item.title || lessons.find((lesson) => lesson.id === item.lessonId)?.title || "Jonli dars"}</strong><small>{item.provider === "zoom_video_sdk" ? "Zoom Video SDK" : item.provider === "zoom" ? "Zoom havola" : "Tashqi havola"} · {item.startedAt ? dateTimeLabel(item.startedAt) : "Tayyorlanmoqda"}</small></span><Badge tone={item.status === "live" ? "gold" : "neutral"}>{item.status === "live" ? "JONLI" : item.status === "preparing" ? "TAYYOR" : "TUGAGAN"}</Badge></button>)}</div>
+    <div>{!active ? <Panel><EmptyState icon={Radio} title="Darsni tanlang" description="Uchrashuv va qo‘l ko‘tarish oynasi shu yerda ochiladi." /></Panel> : active.provider === "zoom_video_sdk" ? <ZoomClassroom key={active.id} room={room} item={active} session={session} demoMode={demoMode} notify={notify} onActivated={(next) => onSessionChange(next)} onEnded={(id) => onSessionChange({ ...active, id, status: "ended", endedAt: new Date().toISOString() })} /> : <Panel className="external-live-detail"><Badge tone={active.status === "live" ? "gold" : "neutral"}>{active.status === "live" ? "JONLI DARS" : "YAKUNLANGAN"}</Badge><h3>{lessons.find((lesson) => lesson.id === active.lessonId)?.title || "Jonli dars"}</h3><p>{active.provider === "meet" ? "Google Meet" : active.provider === "zoom" ? "Zoom" : "Boshqa xizmat"} havolasi · {dateTimeLabel(active.startedAt)}</p>{active.status === "live" ? staff ? <div className="inline-actions"><a className="btn btn-secondary" href={active.joinUrl} target="_blank" rel="noopener noreferrer">Uchrashuvga o‘tish <ExternalLink size={16} /></a><Button variant="secondary" onClick={() => finishExternal(active)} loading={busy}>Yakunlash</Button></div> : <a className="btn btn-primary" href={active.joinUrl} target="_blank" rel="noopener noreferrer" onClick={() => checkIn(active)}>Darsga kirish <ExternalLink size={16} /></a> : null}</Panel>}</div></div> : <Panel><EmptyState icon={Radio} title="Jonli dars yo‘q" description={staff ? "Guruh uchun birinchi jonli darsni oching." : "Ustoz dars boshlaganda sizga xabar keladi."} action={staff ? <Button onClick={() => setOpen(true)}><Plus size={16} /> Dars ochish</Button> : null} /></Panel>}
+    {open ? <Modal title="Guruh uchun jonli dars" description={"Tanlangan guruh: " + room.name} onClose={() => setOpen(false)}><form className="modal-form" onSubmit={create}><div className="live-kind-switch"><button type="button" className={kind === "zoom" ? "active" : ""} onClick={() => setKind("zoom")}>Zoom ichki dars</button><button type="button" className={kind === "external" ? "active" : ""} onClick={() => setKind("external")}>Tayyor havola</button></div><div className="group-target"><Users size={17} /><span><small>GURUH</small><strong>{room.name}</strong></span></div>{kind === "zoom" ? <Field label="Dars nomi" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Masalan, Bugungi fizika darsi" minLength={3} maxLength={120} required /> : null}<Select label="Darsga bog‘lash" value={form.lessonId} onChange={(event) => setForm({ ...form, lessonId: event.target.value })} required={kind === "external"}><option value="">Dars tanlanmagan</option>{lessons.map((lesson) => <option value={lesson.id} key={lesson.id}>{lesson.title}</option>)}</Select>{kind === "external" ? <><Select label="Xizmat" value={form.provider} onChange={(event) => setForm({ ...form, provider: event.target.value })}><option value="meet">Google Meet</option><option value="zoom">Zoom</option><option value="other">Boshqa</option></Select><Field label="HTTPS uchrashuv havolasi" type="url" pattern="https://.*" value={form.joinUrl} onChange={(event) => setForm({ ...form, joinUrl: event.target.value })} placeholder="https://..." required /></> : <p className="modal-hint">Ustoz Zoomga ulangach guruh o‘quvchilariga xabar boradi. Mikrofon va kamera boshqaruvi dars oynasida bo‘ladi.</p>}{error ? <div className="form-error" role="alert">{error}</div> : null}<div className="modal-actions"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Bekor qilish</Button><Button type="submit" loading={busy}>Dars xonasini yaratish</Button></div></form></Modal> : null}
   </div>;
 }

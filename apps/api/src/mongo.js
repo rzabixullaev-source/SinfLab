@@ -58,6 +58,7 @@ export async function ensureIndexes(db) {
     db.collection("quizzes").createIndex({ classroomId: 1, status: 1, createdAt: -1 }),
     db.collection("quiz_attempts").createIndex({ quizId: 1, studentId: 1 }, { unique: true }),
     db.collection("live_sessions").createIndex({ classroomId: 1, status: 1, startedAt: -1 }),
+    db.collection("live_hands").createIndex({ sessionId: 1, studentId: 1 }, { unique: true }),
     db.collection("attendance").createIndex({ sessionId: 1, userId: 1, leftAt: 1 }),
     db.collection("lab_activities").createIndex({ classroomId: 1, createdAt: -1 }),
     db.collection("lab_runs").createIndex({ labId: 1, studentId: 1, createdAt: -1 }),

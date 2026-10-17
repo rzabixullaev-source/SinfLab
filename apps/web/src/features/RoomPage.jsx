@@ -15,7 +15,7 @@ import ProgressTab from "./room/ProgressTab.jsx";
 
 const roleName = { owner: "Xona egasi", teacher: "Ustoz", assistant: "Yordamchi ustoz", student: "O‘quvchi" };
 
-export default function RoomPage({ session, roomId, tab, navigate, notify }) {
+export default function RoomPage({ session, roomId, tab, navigate, notify, demoMode }) {
   const [room, setRoom] = useState(null);
   const [data, setData] = useState(null);
   const [progress, setProgress] = useState(null);
@@ -59,6 +59,15 @@ export default function RoomPage({ session, roomId, tab, navigate, notify }) {
     const result = await api("/classrooms/" + roomId + "/my-progress", { token: session.token });
     setProgress(result.progress);
   }, [roomId, session.token]);
+
+  const updateLiveSession = useCallback((next) => {
+    setData((previous) => previous && {
+      ...previous,
+      sessions: previous.sessions.some((item) => item.id === next.id)
+        ? previous.sessions.map((item) => item.id === next.id ? next : item)
+        : [...previous.sessions, next],
+    });
+  }, []);
 
   async function makeInvite() {
     setBusy(true);
@@ -116,7 +125,7 @@ export default function RoomPage({ session, roomId, tab, navigate, notify }) {
     {tab === "lessons" ? <LessonsTab room={room} lessons={data.lessons} session={session} refresh={refresh} notify={notify} /> : null}
     {tab === "assignments" ? <AssignmentsTab room={room} assignments={data.assignments} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /> : null}
     {tab === "quizzes" ? <QuizzesTab room={room} quizzes={data.quizzes} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /> : null}
-    {tab === "live" ? <LiveTab room={room} sessions={data.sessions} lessons={data.lessons} session={session} refresh={refresh} notify={notify} /> : null}
+    {tab === "live" ? <LiveTab room={room} sessions={data.sessions} lessons={data.lessons} session={session} onSessionChange={updateLiveSession} notify={notify} demoMode={demoMode} /> : null}
     {tab === "labs" ? <LabsTab room={room} labs={data.labs} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /> : null}
     {tab === "progress" && !staff ? <ProgressTab progress={progress} navigate={navigate} room={room} session={session} /> : null}
     {tab === "chat" ? <ChatTab room={room} members={data.members} session={session} notify={notify} /> : null}

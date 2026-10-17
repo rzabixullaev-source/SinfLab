@@ -1,6 +1,14 @@
 # PROJECT_STATE — yangi ishni shu fayldan boshlang
 
-Sana: 2026-10-16
+## Oxirgi holat — 2026-10-17
+
+Ichki Zoom Video SDK darsi qo‘shildi. Ustoz tanlangan guruhda xona yaratadi, ulanishi bilan faqat shu guruhning faol o‘quvchilariga ilova ichida xabar boradi. O‘quvchi qo‘l ko‘taradi; xona yaratuvchisi ruxsat beradi, rad etadi yoki qaytaradi. Ustozning kamera va mikrofon boshqaruvi, o‘quvchining ruxsatdan keyingi mikrofoni va darsdan chiqishi UI da bor. SDK tokeni serverda imzolanadi; guruh/rol API da tekshiriladi. Kalitlarsiz demo xabar va qo‘l ko‘tarishni ko‘rsatadi, haqiqiy audio/video ishlamaydi. Sozlash: docs/ZOOM_CLASSROOM.md.
+
+`npm run test:api`: 20/20 o‘tdi. Yakuniy `npm run build:web` o‘tdi. Zoom Video SDK kalitlari va Atlas URI yo‘q; haqiqiy media/DB smoke testi qolgan.
+
+Keyingi ish: kalitlar mavjud bo‘lganda ikki brauzerda host va o‘quvchi audio/video sinovi, so‘ng Atlas ulanishi. Frontend qolgan funksional va mobil sinovlarini ham davom ettirish.
+
+Sana: 2026-10-17
 Mahsulot: SinfLab — ustoz boshqaradigan o‘quv xonasi.
 Hozirgi bosqich: backend va React frontend MVP ishlaydi; Atlas bilan real ulanish hali tekshirilmagan.
 
@@ -14,12 +22,12 @@ JavaScript ESM, Node.js 22+, Express 5, MongoDB Atlas (rasmiy driver), GridFS, Z
 - Papka va 10 MB gacha material upload/download; fayl GridFS da.
 - Vazifa draft/publish, o‘quvchi submission revisionlari, feedback.
 - Quiz draft/publish, savol kaliti maxfiy, bir urinish, avtomatik baho.
-- Zoom/Meet HTTPS havolali live sessiya va check-in/out davomat.
+- Ichki Zoom Video SDK darsi va Zoom/Meet HTTPS havolali sessiya, check-in/out davomat.
 - Ohm qonuni lab mashqi, hisob va shaxsiy urinishlar.
 - O‘quvchi progress: qoldirilgan live dars, vazifa, quiz va takrorlash.
 
 ## Tekshiruv
-npm run test:api: 19/19 HTTP test o‘tdi. Testlar xotira DB adapteriga ulanadi va asosiy rol/maxfiylik oqimlarini tekshiradi. MongoDB Atlas bilan haqiqiy ulanish, GridFS va transactionlar hali smoke testdan o‘tmagan — URI yo‘q. Video xona yaratish faqat tayyor tashqi havola orqali; AI va cyber sandbox ulanmagan.
+npm run test:api: 20/20 HTTP test o‘tdi. Testlar xotira DB adapteriga ulanadi va asosiy rol/maxfiylik oqimlarini tekshiradi. MongoDB Atlas bilan haqiqiy ulanish, GridFS va transactionlar hali smoke testdan o‘tmagan — URI yo‘q. Ichki Zoom audio/video kalitlar yo‘qligi sababli amalda tekshirilmagan; AI va cyber sandbox ulanmagan.
 
 Frontend: React/Vite, dark responsiv UI. Login/ro‘yxatdan o‘tish, dashboard, xona/dars/chat/material/a’zolar, vazifa, quiz, live havola va davomat, Ohm laboratoriya, o‘quvchi rejasi API ga ulangan. Demo server `npm run dev:demo-api` orqali xotiradagi ma’lumot bilan ishlaydi. `npm run dev:web` bilan localhost:5173 da ko‘riladi. Browserda teacher login, xona/dars/chat/papka/fayl, vazifa va quiz draft/publish, lab yaratish; student login, vazifa topshirish, quiz 2/2 va lab 2 A tajribasi; ustoz 100 ball feedback va o‘quvchida accepted holati tekshirildi. Jonli tashqi havola, revision UI, mobil klaviatura sinovi va real Atlas smoke testi qolgan. Batafsil docs/FRONTEND_PLAN.md.
 
@@ -32,6 +40,6 @@ Jiddiy, ta’limga mos dark UI. Asosiy ranglar: #172B3A, #0F766E, #E9AE43. O‘q
 ## Keyingi aniq ish
 1. Frontenddagi qolgan qo‘lda sinovlar: revision, live havola va davomat, mobil/klaviatura.
 2. Atlas URI mavjud bo‘lganda haqiqiy DB smoke testi: GridFS va transaction ham.
-3. AI test qoralamasi, video provayder integratsiyasi va kengroq progress modullari.
+3. Zoom Video SDK kalitlari mavjud bo‘lganda real media sinovi; AI test qoralamasi va kengroq progress modullari.
 
 Har ishning boshida shu faylni o‘qing; tugaganda oxirgi o‘zgarish va test natijasini yangilang.

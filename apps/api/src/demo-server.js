@@ -6,6 +6,8 @@ const db = memoryDb();
 const config = {
   CORS_ORIGIN: "http://127.0.0.1:5173",
   JWT_SECRET: "sinflab-demo-only-secret-not-for-production-2026",
+  ZOOM_VIDEO_SDK_KEY: process.env.ZOOM_VIDEO_SDK_KEY || "",
+  ZOOM_VIDEO_SDK_SECRET: process.env.ZOOM_VIDEO_SDK_SECRET || "",
 };
 const app = express();
 app.get("/api/v1/demo-status", (_request, response) => response.json({ demo: true }));
