@@ -1,5 +1,9 @@
 # PROJECT_STATE — yangi ishni shu fayldan boshlang
 
+## Oxirgi o'zgarish — 2026-10-18
+
+Vercel frontend login/register so'rovlarini o'zining `/api` manziliga yuborib 404 olayotgani aniqlandi. Railway API `/health` va `/ready` 200 qaytardi, noto'g'ri login 401 JSON qaytardi; ammo CORS `localhost`ga ruxsat bergan. Frontend production HTTP va WebSocket manzillari Railway API originiga yo'naltirildi (`VITE_API_ORIGIN` bilan almashtirish mumkin). Backend production CORS defaulti Vercel originiga moslandi. `npm run test:api`: 21/21 o'tdi; `npm run build:web` o'tdi va build faylida Railway origin hamda WebSocket yo'li borligi tekshirildi. `.env` Git tomonidan ignore qilinadi.
+
 ## Oxirgi holat — 2026-10-17
 
 Asosiy jonli dars Zoom o‘rniga brauzer WebRTC kamerasiga o‘tkazildi. Ustoz guruh uchun `browser_webrtc` xonasini yaratadi va kamera/mikrofon bilan boshlaydi; o‘quvchi video/ovozni oladi, qo‘l ko‘taradi, ruxsatdan keyin mikrofonini ulaydi. To‘liq ekran bor. `apps/api/src/modules/live/signaling.js` WebSocket signal serveri guruh va rol chegarasini tekshiradi; Vite `/api` WebSocket proxy yoqilgan. Zoom eski kod sifatida keyingi bosqich uchun qoldi. `npm run test:api`: 21/21; `npm run build:web` o‘tdi. Ikki headless Chrome oynasida soxta media qurilmalari bilan video, o‘quvchi mikrofoniga ruxsat berish/qaytarish va to‘liq ekran amalda o‘tdi. Batafsil docs/CAMERA_CLASSROOM.md. STUN mavjud, ayrim tashqi tarmoqlar uchun TURN hali qo‘shilmagan.

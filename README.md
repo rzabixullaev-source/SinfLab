@@ -1,5 +1,11 @@
 # SinfLab
 
+## Production manzillari
+
+Vercel frontend: `https://sinf-lab.vercel.app`. Railway API: `https://sinflabapi-production.up.railway.app` (public URL uchun `:8080` yozilmaydi). Frontend production build shu API manzilidan foydalanadi; boshqa API ishlatilsa, Vercel build muhitida `VITE_API_ORIGIN` ni uning HTTPS origin manziliga sozlang va qayta deploy qiling. Mahalliy Vite rejimi esa `/api` proxy orqali `127.0.0.1:4000` ga ulanadi.
+
+Railway production muhiti `CORS_ORIGIN=https://sinf-lab.vercel.app` ni qabul qiladi. U berilmaganida shu manzil production default sifatida ishlatiladi; boshqa frontend domeni ishlatilsa, `CORS_ORIGIN` ni uning aniq origin manziliga sozlang. `MONGODB_URI` va `JWT_SECRET` Railway Variables ichida saqlanadi, `.env` GitHubga yuborilmaydi. API holatini `/api/v1/health` va Atlas ulanishini `/api/v1/ready` orqali tekshiring.
+
 Ustoz boshqaradigan o‘quv xonasi: dars, chat, material, jonli uchrashuv, vazifa, test va laboratoriya bitta joyda. React interfeysi va backend MVP mavjud.
 
 ## Texnologiya

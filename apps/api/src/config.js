@@ -11,5 +11,8 @@ const environmentSchema = z.object({
 });
 
 export function loadConfig(env = process.env) {
-  return environmentSchema.parse(env);
+  const defaultCorsOrigin = env.NODE_ENV === "production"
+    ? "https://sinf-lab.vercel.app"
+    : "http://localhost:5173";
+  return environmentSchema.parse({ CORS_ORIGIN: defaultCorsOrigin, ...env });
 }

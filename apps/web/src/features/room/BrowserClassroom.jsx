@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Hand, Maximize2, Mic, MicOff, Minimize2, Radio, Video, VideoOff } from "lucide-react";
-import { api, errorText } from "../../lib/api.js";
+import { api, errorText, liveSignalUrl } from "../../lib/api.js";
 import { Badge, Button } from "../../components/ui.jsx";
 
 const handText = {
@@ -192,8 +192,7 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
         setVideoOn(true);
       }
-      const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-      const socket = new WebSocket(`${protocol}//${location.host}/api/v1/live-signal`);
+      const socket = new WebSocket(liveSignalUrl());
       socketRef.current = socket;
       await new Promise((resolve, reject) => {
         socket.onopen = resolve;

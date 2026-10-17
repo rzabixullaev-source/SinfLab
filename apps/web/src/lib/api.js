@@ -1,4 +1,12 @@
-const base = "/api/v1";
+const configuredOrigin = import.meta.env.VITE_API_ORIGIN?.trim().replace(/\/+$/, "");
+const apiOrigin = configuredOrigin || (import.meta.env.PROD ? "https://sinflabapi-production.up.railway.app" : "");
+const base = `${apiOrigin}/api/v1`;
+
+export function liveSignalUrl() {
+  const url = new URL(`${base}/live-signal`, window.location.origin);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url.toString();
+}
 
 export class ApiError extends Error {
   constructor(message, status, code) {
