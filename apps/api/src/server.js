@@ -8,7 +8,7 @@ import { attachLiveSignaling } from "./modules/live/signaling.js";
 loadDotEnv({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 const config = loadConfig();
 const { client, db } = await connectMongo(config);
-const server = createApp({ db, config }).listen(config.PORT, "127.0.0.1", () => {
+const server = createApp({ db, config }).listen(config.PORT, config.BIND_HOST, () => {
   console.log("SinfLab API listening on port " + config.PORT);
 });
 const signaling = attachLiveSignaling(server, { db, config });
