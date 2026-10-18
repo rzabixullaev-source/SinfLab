@@ -12,6 +12,8 @@ const environmentSchema = z.object({
   ZOOM_VIDEO_SDK_SECRET: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().optional(),
+  AI_DAILY_REQUEST_LIMIT: z.coerce.number().int().min(1).max(100).default(20),
+  AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(100).max(1000).default(500),
 });
 
 export function loadConfig(env = process.env) {

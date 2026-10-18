@@ -45,6 +45,11 @@ class MemoryCollection {
     return cursor;
   }
   async insertOne(document) {
+    if (this.documents.some((item) => equalValue(item._id, document._id))) {
+      const error = new Error("duplicate");
+      error.code = 11000;
+      throw error;
+    }
     if ("emailLower" in document && this.documents.some((item) => item.emailLower === document.emailLower)) {
       const error = new Error("duplicate");
       error.code = 11000;
@@ -86,10 +91,11 @@ export function memoryDb() {
   };
 }
 
-export async function withServer(db, run) {
+export async function withServer(db, run, overrides = {}) {
   const config = {
     CORS_ORIGIN: "http://localhost:5173",
     JWT_SECRET: "a-long-secret-for-local-tests-only-0123456789",
+    ...overrides,
   };
   const server = createApp({ db, config }).listen(0);
   try {

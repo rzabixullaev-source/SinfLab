@@ -74,6 +74,11 @@ const messages = {
   INVALID_TOKEN: "Sessiya tugagan. Qayta kiring.",
   FORBIDDEN: "Bu amal uchun ruxsatingiz yo‘q.",
   PAYLOAD_TOO_LARGE: "Fayl hajmi 10 MB dan oshmasligi kerak.",
+  AI_DAILY_LIMIT: "Bugungi AI so‘rovlari limiti tugadi. Ertaga qayta urinib ko‘ring.",
+  AI_RATE_LIMIT: "AI so‘rovlari juda tez yuborildi. Birozdan keyin qayta urinib ko‘ring.",
+  AI_MATERIAL_NOT_FOUND: "Tanlangan dars matni tasdiqlanmagan yoki topilmadi.",
+  AI_NOT_CONFIGURED: "AI xizmati hozir sozlanmagan.",
+  AI_UNAVAILABLE: "AI xizmati hozir javob bermayapti. Keyinroq urinib ko‘ring.",
 };
 
 export function errorText(error) {

@@ -140,7 +140,7 @@ export function parentsRouter({ db, config }) {
     const memberships = await db.collection("classroom_members").find({ userId: studentId, role: "student", status: "active" }).toArray();
     const classroomId = parseObjectId(request.query.classroomId);
     if (!memberships.some((item) => id(item.classroomId) === id(classroomId))) throw new HttpError(404, "CLASSROOM_NOT_FOUND", "Classroom not found");
-    response.json(await studentAdvice(db, config, studentId, classroomId));
+    response.json(await studentAdvice(db, config, studentId, classroomId, request.user._id));
   });
 
   router.delete("/children/:studentId", async (request, response) => {

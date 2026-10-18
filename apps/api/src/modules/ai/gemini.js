@@ -1,12 +1,12 @@
 import { HttpError } from "../../shared/errors.js";
 
-export async function generateGemini(config, systemText, userText, fetchImpl = fetch) {
+export async function generateGemini(config, systemText, userText, fetchImpl = config.GEMINI_FETCH || fetch) {
   if (!config.GEMINI_API_KEY) throw new HttpError(503, "AI_NOT_CONFIGURED", "Gemini API key is not configured");
   const model = config.GEMINI_MODEL || "gemini-3.5-flash-lite";
   const response = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-goog-api-key": config.GEMINI_API_KEY },
-    body: JSON.stringify({ systemInstruction: { parts: [{ text: systemText }] }, contents: [{ role: "user", parts: [{ text: userText }] }], generationConfig: { maxOutputTokens: 700 } }),
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: systemText }] }, contents: [{ role: "user", parts: [{ text: userText }] }], generationConfig: { maxOutputTokens: config.AI_MAX_OUTPUT_TOKENS || 500 } }),
     signal: AbortSignal.timeout(20000),
   }).catch(() => { throw new HttpError(502, "AI_UNAVAILABLE", "Gemini service is unavailable"); });
   if (!response.ok) throw new HttpError(502, "AI_UNAVAILABLE", "Gemini service returned an error");

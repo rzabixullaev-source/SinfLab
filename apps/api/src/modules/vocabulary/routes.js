@@ -6,6 +6,7 @@ import { HttpError } from "../../shared/errors.js";
 import { parseObjectId } from "../../shared/ids.js";
 import { generateGemini } from "../ai/gemini.js";
 import { aiRateLimit } from "../ai/limit.js";
+import { reserveAiRequest } from "../ai/budget.js";
 
 const wordSchema = z.object({
   term: z.string().trim().min(1).max(120),
@@ -50,6 +51,8 @@ export function vocabularyRouter({ db, config }) {
   router.post("/words/:wordId/explain", aiRateLimit, async (request, response) => {
     const word = await db.collection("vocabulary_words").findOne({ _id: parseObjectId(request.params.wordId), ownerId: request.user._id });
     if (!word) throw new HttpError(404, "WORD_NOT_FOUND", "Word not found");
+    if (!config.GEMINI_API_KEY) throw new HttpError(503, "AI_NOT_CONFIGURED", "Gemini API key is not configured");
+    await reserveAiRequest(db, request.user._id, config.AI_DAILY_REQUEST_LIMIT || 20);
     const explanation = await generateGemini(config,
       "You are a vocabulary tutor. Reply in Uzbek. Explain the word's grammatical forms or inflections, give three natural example sentences in the target language with Uzbek translations, and a memory tip. State uncertainty when a form depends on context.",
       JSON.stringify({ term: word.term, language: word.language, meaning: word.meaning }));

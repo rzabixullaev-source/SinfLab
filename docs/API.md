@@ -41,6 +41,17 @@ Base URL: /api/v1. JSON so‘rovlar application/json; material yuklash applicati
 - GET /classrooms/:id/assets?folderId=ID.
 - GET /classrooms/:id/assets/:assetId/download — faqat xona a’zosi.
 
+## AI yordamchisi
+
+- GET/PUT /classrooms/:id/teaching-guide — ustoz qo'llanmasini o'qish va yangilash; faqat sinf egasi/ustoz yangilaydi.
+- GET /classrooms/:id/ai-materials — o'quvchiga faqat tasdiqlangan dars matnlari, ustozga qoralamalar ham ko'rinadi.
+- PUT /classrooms/:id/ai-materials/:lessonId — dars uchun AI matnini qoralama sifatida saqlash; tahrir tasdiqni bekor qiladi.
+- PATCH /classrooms/:id/ai-materials/:lessonId/approval — `{ "approved": true|false }`; faqat sinf egasi/ustoz.
+- POST /classrooms/:id/assistant — `{ "question": "...", "lessonId": "..."? }`; o'quvchiga javob, responseId va qolgan kunlik limit qaytadi.
+- POST /classrooms/:id/assistant-responses/:responseId/feedback — `{ "rating": "helpful"|"unhelpful", "comment": "..."? }`; faqat o'z javobiga baho beriladi.
+- GET /classrooms/:id/assistant-quality — ustozga so'nggi 20 ta baholangan javob va izohlar.
+- Kunlik limit `AI_DAILY_REQUEST_LIMIT` (standart 20), javob uzunligi `AI_MAX_OUTPUT_TOKENS` (standart 500). Limit savol, progress maslahati va lug'at tushuntirishiga umumiy qo'llanadi; UTC sana bo'yicha yangilanadi.
+
 ## Vazifa
 
 - POST /classrooms/:id/assignments — title, instructions, lessonId?, dueAt?. Qoralama yaratiladi.
