@@ -10,11 +10,11 @@ const demoAccounts = {
   parent: { email: "otaona@sinflab.uz", password: "Demo2026!" },
 };
 
-export default function AuthScreen({ onAuthenticate, demoMode }) {
+export default function AuthScreen({ onAuthenticate, demoMode, initialError = "" }) {
   const { t } = useSettings();
   const [mode, setMode] = useState("login");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialError);
   const [values, setValues] = useState({ displayName: "", email: "", password: "" });
 
   async function submit(event) {
@@ -56,8 +56,8 @@ export default function AuthScreen({ onAuthenticate, demoMode }) {
         <p className="auth-subtitle">{t(mode === "login" ? "loginSubtitle" : "registerSubtitle")}</p>
         <form onSubmit={submit} className="auth-form">
           {mode === "register" ? <Field label={t("fullName")} value={values.displayName} onChange={(event) => setValues({ ...values, displayName: event.target.value })} placeholder="Dilshod Karimov" minLength={2} required autoComplete="name" /> : null}
-          <Field label={t("email")} type="email" value={values.email} onChange={(event) => setValues({ ...values, email: event.target.value })} placeholder="name@example.com" required autoComplete="email" />
-          <Field label={t("password")} type="password" value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value })} placeholder="••••••••" minLength={mode === "register" ? 8 : 1} required autoComplete={mode === "login" ? "current-password" : "new-password"} />
+          <Field label={t("email")} type="email" value={values.email} onChange={(event) => { setError(""); setValues({ ...values, email: event.target.value }); }} placeholder="name@example.com" required autoComplete="email" />
+          <Field label={t("password")} type="password" value={values.password} onChange={(event) => { setError(""); setValues({ ...values, password: event.target.value }); }} placeholder="••••••••" minLength={mode === "register" ? 8 : 1} required autoComplete={mode === "login" ? "current-password" : "new-password"} />
           {error ? <div className="form-error" role="alert">{error}</div> : null}
           <Button type="submit" loading={busy} className="auth-submit">{t(mode === "login" ? "login" : "register")}<ArrowRight size={17} /></Button>
         </form>

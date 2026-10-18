@@ -4,7 +4,7 @@ import { Globe2, Moon, Sun } from "lucide-react";
 const messages = {
   uz: {
     auto: "Avtomatik", theme: "Ko‘rinish", language: "Sayt tili", dark: "Qora", light: "Oq",
-    workspace: "ISH MAYDONI", home: "Bosh sahifa", vocabulary: "Til kitoblarim", books: "Kitoblar", parents: "Ota-ona kabineti",
+    workspace: "ISH MAYDONI", home: "Bosh sahifa", subjectMap: "Fanlar xaritasi", vocabulary: "Til kitoblarim", books: "Kitoblar", parents: "Ota-ona kabineti",
     classrooms: "O‘QUV XONALARI", createRoom: "Xona yaratish", joinCode: "Kod bilan qo‘shilish", noRooms: "Hozircha xonalar yo‘q.",
     signOut: "Hisobdan chiqish", profile: "Profil", teacher: "Ustoz", student: "O‘quvchi", welcome: "Xush kelibsiz",
     loginTitle: "Hisobingizga kiring", registerTitle: "Hisob yarating", loginSubtitle: "Email va parolingiz bilan kiring.",
@@ -59,7 +59,7 @@ const messages = {
   },
   en: {
     auto: "Automatic", theme: "Appearance", language: "Site language", dark: "Dark", light: "Light",
-    workspace: "WORKSPACE", home: "Home", vocabulary: "My language books", books: "Books", parents: "Parent dashboard",
+    workspace: "WORKSPACE", home: "Home", subjectMap: "Subject map", vocabulary: "My language books", books: "Books", parents: "Parent dashboard",
     classrooms: "CLASSROOMS", createRoom: "Create classroom", joinCode: "Join with code", noRooms: "No classrooms yet.",
     signOut: "Sign out", profile: "Profile", teacher: "Teacher", student: "Student", welcome: "Welcome",
     loginTitle: "Sign in", registerTitle: "Create an account", loginSubtitle: "Sign in with your email and password.",
@@ -111,7 +111,7 @@ const messages = {
   },
   ru: {
     auto: "Автоматически", theme: "Оформление", language: "Язык сайта", dark: "Тёмная", light: "Светлая",
-    workspace: "РАБОЧЕЕ ПРОСТРАНСТВО", home: "Главная", vocabulary: "Мои языковые книги", books: "Книги", parents: "Кабинет родителя",
+    workspace: "РАБОЧЕЕ ПРОСТРАНСТВО", home: "Главная", subjectMap: "Карта предметов", vocabulary: "Мои языковые книги", books: "Книги", parents: "Кабинет родителя",
     classrooms: "КЛАССЫ", createRoom: "Создать класс", joinCode: "Войти по коду", noRooms: "Классов пока нет.",
     signOut: "Выйти", profile: "Профиль", teacher: "Учитель", student: "Ученик", welcome: "Добро пожаловать",
     loginTitle: "Войти в аккаунт", registerTitle: "Создать аккаунт", loginSubtitle: "Введите почту и пароль.",
@@ -173,24 +173,21 @@ const browserLocale = () => {
   const code = navigator.language?.slice(0, 2).toLowerCase();
   return code === "ru" || code === "en" ? code : "uz";
 };
+const initialLocaleChoice = () => {
+  const choice = readChoice("sinflab.language", ["auto", "uz", "ru", "en"], "uz");
+  try { return choice === "auto" && !localStorage.getItem("sinflab.language.v2") ? "uz" : choice; }
+  catch { return "uz"; }
+};
 
 export function SettingsProvider({ children }) {
-  const [localeChoice, setLocaleChoice] = useState(() => readChoice("sinflab.language", ["auto", "uz", "ru", "en"], "auto"));
-  const [themeChoice, setThemeChoice] = useState(() => readChoice("sinflab.theme", ["auto", "dark", "light"], "auto"));
-  const [systemDark, setSystemDark] = useState(() => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true);
-  useEffect(() => {
-    const media = window.matchMedia?.("(prefers-color-scheme: dark)");
-    if (!media) return;
-    const update = () => setSystemDark(media.matches);
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
+  const [localeChoice, setLocaleChoice] = useState(initialLocaleChoice);
+  const [themeChoice, setThemeChoice] = useState(() => readChoice("sinflab.theme", ["dark", "light"], "dark"));
   const locale = localeChoice === "auto" ? browserLocale() : localeChoice;
-  const theme = themeChoice === "auto" ? (systemDark ? "dark" : "light") : themeChoice;
+  const theme = themeChoice;
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dataset.theme = theme;
-    try { localStorage.setItem("sinflab.language", localeChoice); localStorage.setItem("sinflab.theme", themeChoice); } catch { /* private browsing */ }
+    try { localStorage.setItem("sinflab.language", localeChoice); localStorage.setItem("sinflab.language.v2", "1"); localStorage.setItem("sinflab.theme", themeChoice); } catch { /* private browsing */ }
   }, [locale, theme, localeChoice, themeChoice]);
   const value = useMemo(() => ({ locale, localeChoice, setLocaleChoice, theme, themeChoice, setThemeChoice,
     t: (key, values = {}) => (messages[locale]?.[key] || messages.uz[key] || key).replace(/\{(\w+)\}/g, (_, name) => String(values[name] ?? "")),
@@ -208,9 +205,7 @@ export function SettingsControls({ compact = false }) {
         <option value="auto">{t("auto")} ({locale.toUpperCase()})</option><option value="uz">O‘zbekcha</option>
         <option value="ru">Русский</option><option value="en">English</option>
       </select></label>
-    <label className="settings-choice">{theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}<span className="sr-only">{t("theme")}</span>
-      <select aria-label={t("theme")} value={themeChoice} onChange={(event) => setThemeChoice(event.target.value)}>
-        <option value="auto">{t("auto")}</option><option value="dark">{t("dark")}</option><option value="light">{t("light")}</option>
-      </select></label>
+    <button className="theme-toggle" type="button" aria-label={theme === "dark" ? t("light") : t("dark")} title={theme === "dark" ? t("light") : t("dark")}
+      onClick={() => setThemeChoice(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}</button>
   </div>;
 }

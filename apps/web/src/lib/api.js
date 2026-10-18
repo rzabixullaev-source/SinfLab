@@ -96,6 +96,21 @@ export async function downloadLibraryPdf(book, token) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+export async function downloadLearningFile(classroomId, resource, token) {
+  const response = await fetch(base + `/classrooms/${classroomId}/learning-files/${resource.id}/download`, {
+    headers: { authorization: "Bearer " + token },
+  });
+  if (!response.ok) throw new ApiError("Faylni yuklab bo‘lmadi", response.status);
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = resource.filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 const messages = {
   INVALID_CREDENTIALS: "Email yoki parol xato.",
   AUTH_RATE_LIMIT: "Kirishga urinishlar ko‘paydi. 15 daqiqadan keyin qayta urinib ko‘ring.",

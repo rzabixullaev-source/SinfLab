@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BookOpen, CalendarDays, ClipboardList, FlaskConical, GraduationCap, Plus, Sparkles, Users } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, ClipboardList, FlaskConical, GraduationCap, MapPinned, Plus, Sparkles, Users } from "lucide-react";
 import { api } from "../lib/api.js";
 import { Badge, Button, EmptyState, Panel, SectionHeading } from "../components/ui.jsx";
 import { todayLabel } from "../lib/date.js";
-import SubjectMap from "./SubjectMap.jsx";
 import { useSettings } from "../lib/settings.jsx";
 
 const firstName = (name) => name?.trim().split(/\s+/)[0] || "Do‘st";
 
-export default function Dashboard({ session, rooms, onOpenRoom, onCreate, onJoin }) {
+export default function Dashboard({ session, rooms, onOpenRoom, onCreate, onJoin, onMap }) {
   const { t } = useSettings();
   const [progress, setProgress] = useState(null);
   const [parentInvite, setParentInvite] = useState(null);
@@ -35,7 +34,7 @@ export default function Dashboard({ session, rooms, onOpenRoom, onCreate, onJoin
   return <div className="page-enter dashboard-page">
     <div className="dashboard-intro">
       <div><span className="eyebrow"><CalendarDays size={14} /> {todayLabel()}</span><h1>{t("dashboardGreeting", { name: firstName(session.user.displayName) })}</h1><p>{t("dashboardLead")}</p></div>
-      <div className="intro-actions"><Button variant="secondary" onClick={onJoin}>{t("joinCode")}</Button><Button onClick={onCreate}><Plus size={17} /> {t("newRoom")}</Button></div>
+      <div className="intro-actions"><Button variant="secondary" onClick={onMap}><MapPinned size={17} /> {t("subjectMap")}</Button><Button variant="secondary" onClick={onJoin}>{t("joinCode")}</Button><Button onClick={onCreate}><Plus size={17} /> {t("newRoom")}</Button></div>
     </div>
 
     {isStudent ? <Panel className="parent-link-panel"><div><strong>{t("connectParent")}</strong><p>{t("parentCodeHint")}</p></div><Button variant="secondary" onClick={createParentInvite}>{t("makeCode")}</Button>{parentInvite ? <code className="parent-invite-code">{parentInvite.code}</code> : null}{parentInviteError ? <p role="alert">{parentInviteError}</p> : null}</Panel> : null}
@@ -51,8 +50,6 @@ export default function Dashboard({ session, rooms, onOpenRoom, onCreate, onJoin
       <Panel className="stat-card"><span className="stat-icon blue"><ClipboardList size={20} /></span><strong>{progress?.assignmentsToDo?.length ?? 0}</strong><span>{t("nextTasks")}</span></Panel>
       <Panel className="stat-card"><span className="stat-icon violet"><Sparkles size={20} /></span><strong>{progress?.reviewQueue?.length ?? 0}</strong><span>{t("reviewAgain")}</span></Panel>
     </div>
-
-    {isStudent ? <SubjectMap rooms={rooms.filter((room) => room.role === "student")} session={session} onOpenRoom={onOpenRoom} onJoin={onJoin} /> : null}
 
     <div className="dashboard-columns">
       <div>

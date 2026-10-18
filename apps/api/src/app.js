@@ -7,6 +7,7 @@ import { classroomsRouter } from "./modules/classrooms/routes.js";
 import { lessonsRouter } from "./modules/lessons/routes.js";
 import { messagesRouter } from "./modules/classrooms/messages.js";
 import { resourcesRouter } from "./modules/resources/routes.js";
+import { learningResourcesRouter } from "./modules/resources/learning.js";
 import { assignmentsRouter } from "./modules/assignments/routes.js";
 import { submissionsRouter } from "./modules/assignments/submissions.js";
 import { quizzesRouter } from "./modules/quizzes/routes.js";
@@ -46,6 +47,7 @@ export function createApp({ db, config }) {
   app.use("/api/v1/classrooms", lessonsRouter({ db, config }));
   app.use("/api/v1/classrooms", messagesRouter({ db, config }));
   app.use("/api/v1/classrooms", resourcesRouter({ db, config }));
+  app.use("/api/v1/classrooms", learningResourcesRouter({ db, config }));
   app.use("/api/v1/classrooms", assignmentsRouter({ db, config }));
   app.use("/api/v1/classrooms", submissionsRouter({ db, config }));
   app.use("/api/v1/classrooms", quizzesRouter({ db, config }));

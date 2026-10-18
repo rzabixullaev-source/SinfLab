@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, Atom, Bell, BookMarked, BookOpen, CircleHelp, Home, Languages, LogOut, Menu, Plus, Radio, UserRound, X } from "lucide-react";
+import { ArrowRight, Atom, Bell, BookMarked, BookOpen, CircleHelp, Home, Languages, LogOut, MapPinned, Menu, Plus, Radio, UserRound, X } from "lucide-react";
 import AuthScreen from "./features/AuthScreen.jsx";
 import Dashboard from "./features/Dashboard.jsx";
 import ParentDashboard from "./features/ParentDashboard.jsx";
@@ -7,6 +7,7 @@ import RoomPage from "./features/RoomPage.jsx";
 import VocabularyPage from "./features/VocabularyPage.jsx";
 import LegacyVocabularyPage from "./features/LegacyVocabularyPage.jsx";
 import BooksPage from "./features/BooksPage.jsx";
+import SubjectMap from "./features/SubjectMap.jsx";
 import { SettingsControls, useSettings } from "./lib/settings.jsx";
 import { Button, Field, Modal, Select, TextArea } from "./components/ui.jsx";
 import { api, errorText, readSession, saveSession } from "./lib/api.js";
@@ -15,7 +16,7 @@ function currentRoute() {
   const parts = window.location.hash.replace(/^#\/?/, "").split("/");
   return parts[0] === "room" && parts[1]
     ? { roomId: parts[1], tab: parts[2] || "overview" }
-    : { roomId: null, tab: ["parents", "vocabulary", "vocabulary-legacy", "books"].includes(parts[0]) ? parts[0] : "home",
+    : { roomId: null, tab: ["parents", "vocabulary", "vocabulary-legacy", "books", "map"].includes(parts[0]) ? parts[0] : "home",
       bookId: parts[0] === "books" ? (parts[1] === "pdf" ? parts[2] : parts[1]) : null,
       bookKind: parts[0] === "books" && parts[1] === "pdf" ? "pdf" : "vocabulary" };
 }
@@ -28,6 +29,7 @@ export default function App() {
   const { t } = useSettings();
   const [session, setSession] = useState(readSession);
   const [booting, setBooting] = useState(Boolean(readSession()));
+  const [bootError, setBootError] = useState("");
   const [rooms, setRooms] = useState([]);
   const [route, setRoute] = useState(currentRoute);
   const [demoMode, setDemoMode] = useState(false);
@@ -100,8 +102,9 @@ export default function App() {
       })
       .catch((error) => {
         if (!active) return;
-        if (error.status === 401) { saveSession(null); setSession(null); }
-        else setToast(errorText(error));
+        saveSession(null);
+        setSession(null);
+        if (error.status !== 401) setBootError(errorText(error));
       })
       .finally(() => { if (active) setBooting(false); });
     return () => { active = false; };
@@ -115,6 +118,7 @@ export default function App() {
     const data = await api(path, { method: "POST", body });
     const next = { token: data.token, user: data.user };
     saveSession(next);
+    setBootError("");
     setSession(next);
     if (!window.location.hash || window.location.hash === "#/") window.location.hash = "/";
     setToast(t("welcome") + ", " + data.user.displayName.split(" ")[0] + "!");
@@ -158,7 +162,7 @@ export default function App() {
   }
 
   if (booting) return <div className="boot-screen"><span className="brand-mark"><Atom size={24} /></span><span>Sin<span>Lab</span></span><div className="boot-bar" /></div>;
-  if (!session) return <AuthScreen onAuthenticate={authenticate} demoMode={demoMode} />;
+  if (!session) return <AuthScreen onAuthenticate={authenticate} demoMode={demoMode} initialError={bootError} />;
 
   const selectedRoom = rooms.find((room) => room.id === route.roomId);
 
@@ -169,6 +173,7 @@ export default function App() {
       <div className="sidebar-scroll">
         <div className="nav-caption">{t("workspace")}</div>
         <button className={"side-link " + (route.tab === "home" ? "active" : "")} onClick={() => navigate(null)}><Home size={19} /> {t("home")}</button>
+        <button className={"side-link " + (route.tab === "map" ? "active" : "")} onClick={() => { window.location.hash = "/map"; }}><MapPinned size={19} /> {t("subjectMap")}</button>
         <button className={"side-link " + (["vocabulary", "vocabulary-legacy"].includes(route.tab) ? "active" : "")} onClick={() => { window.location.hash = "/vocabulary"; }}><Languages size={19} /> {t("vocabulary")}</button>
         <button className={"side-link " + (route.tab === "books" ? "active" : "")} onClick={() => { window.location.hash = "/books"; }}><BookMarked size={19} /> {t("books")}</button>
         <button className={"side-link " + (route.tab === "parents" ? "active" : "")} onClick={() => { window.location.hash = "/parents"; }}><UserRound size={19} /> {t("parents")}</button>
@@ -180,8 +185,10 @@ export default function App() {
     </aside>
 
     <div className="app-main">
-      <header className="topbar"><div className="topbar-left"><button className="menu-button icon-button" onClick={() => setNavOpen(true)} aria-label="Menyuni ochish"><Menu size={21} /></button><span className="topbar-breadcrumb">SinfLab</span><span className="crumb-divider">/</span><strong>{selectedRoom?.name || (route.tab === "parents" ? t("parents") : route.tab === "books" ? t("books") : ["vocabulary", "vocabulary-legacy"].includes(route.tab) ? t("vocabulary") : t("home"))}</strong></div><div className="topbar-right">{demoMode ? <span className="demo-pill">DEMO</span> : null}<SettingsControls compact /><div className="live-alert-wrap"><button className="live-alert-button" aria-label={"Jonli dars xabarlari: " + liveAlerts.length} onClick={() => setAlertsOpen(!alertsOpen)}><Bell size={18} />{liveAlerts.length ? <span>{liveAlerts.length}</span> : null}</button>{alertsOpen ? <div className="live-alert-popover"><strong>Jonli dars xabarlari</strong>{liveAlerts.length ? liveAlerts.map((item) => <button key={item.session.id} onClick={() => { if (item.observer) window.location.hash = "/parents"; else navigate(item.session.classroomId, "live"); setAlertsOpen(false); }}><Radio size={17} /><span><b>{item.session.title}</b><small>{item.classroomName} guruhida dars boshlandi</small></span><ArrowRight size={15} /></button>) : <p>Hozir jonli dars yo‘q.</p>}</div> : null}</div><span className="topbar-role"><UserRound size={15} /> {selectedRoom?.role === "student" ? t("student") : selectedRoom ? t("teacher") : t("profile")}</span><button className="topbar-avatar" onClick={logout} title={t("signOut")}>{initials(session.user.displayName)}</button></div></header>
-      <main className="main-content">{route.tab === "vocabulary"
+      <header className="topbar"><div className="topbar-left"><button className="menu-button icon-button" onClick={() => setNavOpen(true)} aria-label="Menyuni ochish"><Menu size={21} /></button><span className="topbar-breadcrumb">SinfLab</span><span className="crumb-divider">/</span><strong>{selectedRoom?.name || (route.tab === "parents" ? t("parents") : route.tab === "books" ? t("books") : route.tab === "map" ? t("subjectMap") : ["vocabulary", "vocabulary-legacy"].includes(route.tab) ? t("vocabulary") : t("home"))}</strong></div><div className="topbar-right">{demoMode ? <span className="demo-pill">DEMO</span> : null}<SettingsControls compact /><div className="live-alert-wrap"><button className="live-alert-button" aria-label={"Jonli dars xabarlari: " + liveAlerts.length} onClick={() => setAlertsOpen(!alertsOpen)}><Bell size={18} />{liveAlerts.length ? <span>{liveAlerts.length}</span> : null}</button>{alertsOpen ? <div className="live-alert-popover"><strong>Jonli dars xabarlari</strong>{liveAlerts.length ? liveAlerts.map((item) => <button key={item.session.id} onClick={() => { if (item.observer) window.location.hash = "/parents"; else navigate(item.session.classroomId, "live"); setAlertsOpen(false); }}><Radio size={17} /><span><b>{item.session.title}</b><small>{item.classroomName} guruhida dars boshlandi</small></span><ArrowRight size={15} /></button>) : <p>Hozir jonli dars yo‘q.</p>}</div> : null}</div><span className="topbar-role"><UserRound size={15} /> {selectedRoom?.role === "student" ? t("student") : selectedRoom ? t("teacher") : t("profile")}</span><button className="topbar-avatar" onClick={logout} title={t("signOut")}>{initials(session.user.displayName)}</button></div></header>
+      <main className="main-content">{route.tab === "map"
+        ? <SubjectMap rooms={rooms.filter((room) => room.role === "student")} session={session} onOpenRoom={navigate} onJoin={() => openModal("join")} />
+        : route.tab === "vocabulary"
         ? <VocabularyPage session={session} />
         : route.tab === "vocabulary-legacy"
         ? <LegacyVocabularyPage session={session} />
@@ -191,7 +198,7 @@ export default function App() {
         ? <ParentDashboard session={session} />
         : route.roomId
         ? <RoomPage key={route.roomId} session={session} roomId={route.roomId} tab={route.tab} navigate={(tab) => navigate(route.roomId, tab)} notify={setToast} refreshRooms={refreshRooms} demoMode={demoMode} />
-        : <Dashboard session={session} rooms={rooms} onOpenRoom={navigate} onCreate={() => openModal("create")} onJoin={() => openModal("join")} />}
+        : <Dashboard session={session} rooms={rooms} onOpenRoom={navigate} onCreate={() => openModal("create")} onJoin={() => openModal("join")} onMap={() => { window.location.hash = "/map"; }} />}
       </main>
     </div>
 

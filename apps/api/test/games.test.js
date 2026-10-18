@@ -3,6 +3,42 @@ import test from "node:test";
 import { memoryDb, requestJson, withServer } from "./helpers.js";
 import { gameModesForSubject } from "@sinflab/contracts/game-modes";
 
+test("teacher generates a topic game once and students are graded for that lesson", async () => {
+  let calls = 0;
+  const generated = JSON.stringify({ questions: [
+    { prompt: "2 + 2 nechaga teng?", choices: ["4", "3", "5", "6"], correctIndex: 0, explanation: "Ikki va ikki yig‘indisi to‘rt." },
+    { prompt: "3 + 1 nechaga teng?", choices: ["2", "3", "4", "5"], correctIndex: 2, explanation: "Uchga bir qo‘shsak to‘rt." },
+    { prompt: "5 - 2 nechaga teng?", choices: ["3", "2", "4", "1"], correctIndex: 0, explanation: "Beshtadan ikkini ayirsak uch." },
+  ] });
+  await withServer(memoryDb(), async (base) => {
+    const register = async (name) => (await requestJson(base, "/auth/register", { method: "POST", body: {
+      displayName: name, email: `${name.toLowerCase()}@example.com`, password: "strong-pass-123",
+    } })).body;
+    const teacher = await register("TopicTeacher");
+    const student = await register("TopicStudent");
+    const room = (await requestJson(base, "/classrooms", { method: "POST", token: teacher.token,
+      body: { name: "Matematika sinfi", subject: "Matematika", mode: "course" } })).body.classroom;
+    const root = `/classrooms/${room.id}`;
+    const invite = (await requestJson(base, root + "/invites", { method: "POST", token: teacher.token, body: {} })).body.invite;
+    await requestJson(base, "/classrooms/join", { method: "POST", token: student.token, body: { code: invite.code } });
+    const lesson = (await requestJson(base, root + "/lessons", { method: "POST", token: teacher.token,
+      body: { title: "Oddiy qo‘shish", description: "Kichik sonlarni qo‘shish" } })).body.lesson;
+    const path = `${root}/games/lesson/${lesson.id}/generate`;
+    assert.equal((await requestJson(base, path, { method: "POST", token: student.token, body: {} })).status, 403);
+    const created = await requestJson(base, path, { method: "POST", token: teacher.token, body: {} });
+    assert.equal(created.status, 201);
+    assert.equal(created.body.questionCount, 3);
+    assert.equal((await requestJson(base, path, { method: "POST", token: teacher.token, body: {} })).body.created, false);
+    assert.equal(calls, 1);
+    const challenge = (await requestJson(base, `${root}/games/challenge?mode=choice&lessonId=${lesson.id}`, { token: student.token })).body.challenge;
+    assert.equal(challenge.correctIndex, undefined);
+    const answer = await requestJson(base, `${root}/games/answer`, { method: "POST", token: student.token,
+      body: { quizId: challenge.quizId, questionIndex: challenge.questionIndex, mode: "choice", answer: 0 } });
+    assert.equal(answer.status, 201);
+    assert.equal(answer.body.lessonId, lesson.id);
+  }, { GEMINI_API_KEY: "test-key", GEMINI_FETCH: async () => { calls++; return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: generated }] } }] }) }; } });
+});
+
 test("published quiz powers two graded games and leaderboard contains only classmates", async () => {
   await withServer(memoryDb(), async (base) => {
     const register = async (name) => (await requestJson(base, "/auth/register", { method: "POST", body: { displayName: name, email: `${name.toLowerCase()}@example.com`, password: "strong-pass-123" } })).body;
