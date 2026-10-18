@@ -8,6 +8,7 @@ import VocabularyPage from "./features/VocabularyPage.jsx";
 import LegacyVocabularyPage from "./features/LegacyVocabularyPage.jsx";
 import BooksPage from "./features/BooksPage.jsx";
 import SubjectMap from "./features/SubjectMap.jsx";
+import InvitationsPage from "./features/InvitationsPage.jsx";
 import { SettingsControls, useSettings } from "./lib/settings.jsx";
 import { Button, Field, Modal, Select, TextArea } from "./components/ui.jsx";
 import { api, errorText, readSession, saveSession } from "./lib/api.js";
@@ -16,7 +17,7 @@ function currentRoute() {
   const parts = window.location.hash.replace(/^#\/?/, "").split("/");
   return parts[0] === "room" && parts[1]
     ? { roomId: parts[1], tab: parts[2] || "overview" }
-    : { roomId: null, tab: ["parents", "vocabulary", "vocabulary-legacy", "books", "map"].includes(parts[0]) ? parts[0] : "home",
+    : { roomId: null, tab: ["parents", "vocabulary", "vocabulary-legacy", "books", "map", "invitations"].includes(parts[0]) ? parts[0] : "home",
       bookId: parts[0] === "books" ? (parts[1] === "pdf" ? parts[2] : parts[1]) : null,
       bookKind: parts[0] === "books" && parts[1] === "pdf" ? "pdf" : "vocabulary" };
 }
@@ -174,6 +175,7 @@ export default function App() {
         <div className="nav-caption">{t("workspace")}</div>
         <button className={"side-link " + (route.tab === "home" ? "active" : "")} onClick={() => navigate(null)}><Home size={19} /> {t("home")}</button>
         <button className={"side-link " + (route.tab === "map" ? "active" : "")} onClick={() => { window.location.hash = "/map"; }}><MapPinned size={19} /> {t("subjectMap")}</button>
+        <button className={"side-link " + (route.tab === "invitations" ? "active" : "")} onClick={() => { window.location.hash = "/invitations"; }}><Bell size={19} /> Taklifnomalar</button>
         <button className={"side-link " + (["vocabulary", "vocabulary-legacy"].includes(route.tab) ? "active" : "")} onClick={() => { window.location.hash = "/vocabulary"; }}><Languages size={19} /> {t("vocabulary")}</button>
         <button className={"side-link " + (route.tab === "books" ? "active" : "")} onClick={() => { window.location.hash = "/books"; }}><BookMarked size={19} /> {t("books")}</button>
         <button className={"side-link " + (route.tab === "parents" ? "active" : "")} onClick={() => { window.location.hash = "/parents"; }}><UserRound size={19} /> {t("parents")}</button>
@@ -185,9 +187,11 @@ export default function App() {
     </aside>
 
     <div className="app-main">
-      <header className="topbar"><div className="topbar-left"><button className="menu-button icon-button" onClick={() => setNavOpen(true)} aria-label="Menyuni ochish"><Menu size={21} /></button><span className="topbar-breadcrumb">SinfLab</span><span className="crumb-divider">/</span><strong>{selectedRoom?.name || (route.tab === "parents" ? t("parents") : route.tab === "books" ? t("books") : route.tab === "map" ? t("subjectMap") : ["vocabulary", "vocabulary-legacy"].includes(route.tab) ? t("vocabulary") : t("home"))}</strong></div><div className="topbar-right">{demoMode ? <span className="demo-pill">DEMO</span> : null}<SettingsControls compact /><div className="live-alert-wrap"><button className="live-alert-button" aria-label={"Jonli dars xabarlari: " + liveAlerts.length} onClick={() => setAlertsOpen(!alertsOpen)}><Bell size={18} />{liveAlerts.length ? <span>{liveAlerts.length}</span> : null}</button>{alertsOpen ? <div className="live-alert-popover"><strong>Jonli dars xabarlari</strong>{liveAlerts.length ? liveAlerts.map((item) => <button key={item.session.id} onClick={() => { if (item.observer) window.location.hash = "/parents"; else navigate(item.session.classroomId, "live"); setAlertsOpen(false); }}><Radio size={17} /><span><b>{item.session.title}</b><small>{item.classroomName} guruhida dars boshlandi</small></span><ArrowRight size={15} /></button>) : <p>Hozir jonli dars yo‘q.</p>}</div> : null}</div><span className="topbar-role"><UserRound size={15} /> {selectedRoom?.role === "student" ? t("student") : selectedRoom ? t("teacher") : t("profile")}</span><button className="topbar-avatar" onClick={logout} title={t("signOut")}>{initials(session.user.displayName)}</button></div></header>
+      <header className="topbar"><div className="topbar-left"><button className="menu-button icon-button" onClick={() => setNavOpen(true)} aria-label="Menyuni ochish"><Menu size={21} /></button><span className="topbar-breadcrumb">SinfLab</span><span className="crumb-divider">/</span><strong>{selectedRoom?.name || (route.tab === "invitations" ? "Taklifnomalar" : route.tab === "parents" ? t("parents") : route.tab === "books" ? t("books") : route.tab === "map" ? t("subjectMap") : ["vocabulary", "vocabulary-legacy"].includes(route.tab) ? t("vocabulary") : t("home"))}</strong></div><div className="topbar-right">{demoMode ? <span className="demo-pill">DEMO</span> : null}<SettingsControls compact /><div className="live-alert-wrap"><button className="live-alert-button" aria-label={"Jonli dars xabarlari: " + liveAlerts.length} onClick={() => setAlertsOpen(!alertsOpen)}><Bell size={18} />{liveAlerts.length ? <span>{liveAlerts.length}</span> : null}</button>{alertsOpen ? <div className="live-alert-popover"><strong>Jonli dars xabarlari</strong>{liveAlerts.length ? liveAlerts.map((item) => <button key={item.session.id} onClick={() => { if (item.observer) window.location.hash = "/parents"; else navigate(item.session.classroomId, "live"); setAlertsOpen(false); }}><Radio size={17} /><span><b>{item.session.title}</b><small>{item.classroomName} guruhida dars boshlandi</small></span><ArrowRight size={15} /></button>) : <p>Hozir jonli dars yo‘q.</p>}</div> : null}</div><span className="topbar-role"><UserRound size={15} /> {selectedRoom?.mode === "club" ? "A’zo" : selectedRoom?.role === "student" ? t("student") : selectedRoom ? t("teacher") : t("profile")}</span><button className="topbar-avatar" onClick={logout} title={t("signOut")}>{initials(session.user.displayName)}</button></div></header>
       <main className="main-content">{route.tab === "map"
-        ? <SubjectMap rooms={rooms.filter((room) => room.role === "student")} session={session} onOpenRoom={navigate} onJoin={() => openModal("join")} />
+        ? <SubjectMap rooms={rooms} session={session} onOpenRoom={navigate} />
+        : route.tab === "invitations"
+        ? <InvitationsPage session={session} rooms={rooms} refreshRooms={refreshRooms} notify={setToast} />
         : route.tab === "vocabulary"
         ? <VocabularyPage session={session} />
         : route.tab === "vocabulary-legacy"
@@ -204,7 +208,7 @@ export default function App() {
 
     {modal ? <Modal title={modal === "create" ? "Yangi o‘quv xonasi" : "Xonaga qo‘shilish"} description={modal === "create" ? "Darslar, materiallar va o‘quvchilar uchun yagona joy yarating." : "Ustozingiz yuborgan taklif kodini kiriting."} onClose={() => setModal(null)}>
       <form className="modal-form" onSubmit={submitModal}>
-        {modal === "create" ? <><Field label="Xona nomi" placeholder="Masalan, Fizika 9-sinf" minLength={3} maxLength={120} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required autoFocus /><Field label="Fan / yo‘nalish" placeholder="Fizika" value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })} /><Select label="Xona turi" value={form.mode} onChange={(event) => setForm({ ...form, mode: event.target.value })}><option value="course">Kurs xonasi</option><option value="club">O‘quv klubi</option></Select><TextArea label="Qisqacha tavsif" rows={3} placeholder="Bu xonada nimalarni o‘rganasiz?" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></> : <Field label="Taklif kodi" placeholder="Kodni shu yerga qo‘ying" value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} required autoFocus />}
+        {modal === "create" ? <><Field label="Xona nomi" placeholder="Masalan, Fizika 9-sinf" minLength={3} maxLength={120} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required autoFocus /><Field label="Fan / yo‘nalish" placeholder="Fizika" value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })} /><Select label="Guruh turi" value={form.mode} onChange={(event) => setForm({ ...form, mode: event.target.value })}><option value="course">Ustozli sinf · yaratuvchi ustoz</option><option value="club">Oddiy chat · ustoz/o‘quvchi roli yo‘q</option></Select><TextArea label="Qisqacha tavsif" rows={3} placeholder="Bu xonada nimalarni o‘rganasiz?" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></> : <Field label="Taklif kodi" placeholder="Kodni shu yerga qo‘ying" value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} required autoFocus />}
         {modalError ? <div className="form-error" role="alert">{modalError}</div> : null}
         <div className="modal-actions"><Button type="button" variant="secondary" onClick={() => setModal(null)}>Bekor qilish</Button><Button type="submit" loading={modalBusy}>{modal === "create" ? "Xona yaratish" : "Qo‘shilish"}<ArrowRight size={16} /></Button></div>
       </form>

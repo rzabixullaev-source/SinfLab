@@ -63,7 +63,7 @@ export function messagesRouter({ db, config }) {
       _id: messageId, classroomId, deletedAt: null,
     });
     if (!message) throw new HttpError(404, "MESSAGE_NOT_FOUND", "Message not found");
-    if (!message.senderId.equals(request.user._id)) requireTeachingRole(membership);
+    if (!message.senderId.equals(request.user._id) && !(membership.classroomMode === "club" && membership.role === "owner")) requireTeachingRole(membership);
     await db.collection("messages").updateOne(
       { _id: messageId }, { $set: { deletedAt: new Date(), body: "" } },
     );

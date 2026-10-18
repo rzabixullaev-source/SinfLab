@@ -5,6 +5,25 @@ import { memoryDb, requestJson, withServer } from "./helpers.js";
 const aiResponse = JSON.stringify({ meaning: "qiziqarli", pronunciation: "/ˈɪntrəstɪŋ/", forms: "interesting · more interesting",
   examples: [{ target: "This is interesting.", native: "Bu qiziqarli." }, { target: "An interesting book.", native: "Qiziqarli kitob." }] });
 
+test("Gemini preview can be saved as the same card without another AI call", async () => {
+  let aiCalls = 0;
+  await withServer(memoryDb(), async (base) => {
+    const author = (await requestJson(base, "/auth/register", { method: "POST", body: {
+      displayName: "PreviewAuthor", email: "previewauthor@example.com", password: "strong-pass-123",
+    } })).body;
+    const course = (await requestJson(base, "/vocabulary/courses", { method: "POST", token: author.token, body: { nativeLanguage: "uz", targetLanguage: "en" } })).body.course;
+    const lesson = (await requestJson(base, `/vocabulary/courses/${course.id}/lessons`, { method: "POST", token: author.token, body: { topic: "Interesting things" } })).body.lesson;
+    const prefix = `/vocabulary/courses/${course.id}/lessons/${lesson.id}`;
+    const preview = await requestJson(base, `${prefix}/preview`, { method: "POST", token: author.token, body: { term: "interesting" } });
+    assert.equal(preview.status, 200);
+    assert.equal(preview.body.card.meaning, "qiziqarli");
+    const saved = await requestJson(base, `${prefix}/words`, { method: "POST", token: author.token, body: { term: "interesting", ...preview.body.card } });
+    assert.equal(saved.status, 201);
+    assert.equal(saved.body.word.examples.length, 2);
+    assert.equal(aiCalls, 1);
+  }, { GEMINI_API_KEY: "test-key", GEMINI_FETCH: async () => { aiCalls += 1; return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: aiResponse }] } }] }) }; } });
+});
+
 test("language book grows through one daily topic, AI word cards, and a shareable PDF", async () => {
   const db = memoryDb();
   let aiCalls = 0;

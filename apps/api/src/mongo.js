@@ -50,6 +50,7 @@ export async function ensureIndexes(db) {
     db.collection("classroom_members").createIndex({ userId: 1, status: 1 }),
     db.collection("classroom_invites").createIndex({ codeHash: 1 }, { unique: true }),
     db.collection("classroom_invites").createIndex({ classroomId: 1, expiresAt: 1 }),
+    db.collection("classroom_email_invites").createIndex({ recipientId: 1, status: 1, createdAt: -1 }),
     db.collection("classrooms").createIndex({ ownerId: 1, createdAt: -1 }),
     db.collection("lessons").createIndex({ classroomId: 1, startsAt: 1 }),
     db.collection("messages").createIndex({ classroomId: 1, createdAt: -1 }),

@@ -27,7 +27,10 @@ export default function VocabularyPage({ session }) {
   const [showSetup, setShowSetup] = useState(false);
   const [topic, setTopic] = useState("");
   const [card, setCard] = useState(emptyCard);
-  const [manual, setManual] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [previewError, setPreviewError] = useState("");
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [previewRetry, setPreviewRetry] = useState(0);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -68,6 +71,20 @@ export default function VocabularyPage({ session }) {
     if (courseId) { setLessons([]); setLessonId(null); loadLessons(courseId).catch((cause) => setError(errorText(cause))); }
     else { setLessons([]); setLessonId(null); }
   }, [courseId, loadLessons]);
+  useEffect(() => {
+    const term = card.term.trim();
+    setPreview(null); setPreviewError("");
+    if (!courseId || !lessonId || term.length < 2) { setPreviewBusy(false); return; }
+    let current = true;
+    setPreviewBusy(true);
+    const timer = setTimeout(() => {
+      api(`/vocabulary/courses/${courseId}/lessons/${lessonId}/preview`, { method: "POST", token: session.token, body: { term } })
+        .then((result) => { if (current) setPreview({ term, ...result.card }); })
+        .catch((cause) => { if (current) setPreviewError(errorText(cause)); })
+        .finally(() => { if (current) setPreviewBusy(false); });
+    }, 900);
+    return () => { current = false; clearTimeout(timer); };
+  }, [card.term, courseId, lessonId, previewRetry, session.token]);
 
   async function createCourse(event) {
     event.preventDefault(); setBusy("course"); setError("");
@@ -90,15 +107,16 @@ export default function VocabularyPage({ session }) {
   }
 
   async function addCard(event) {
-    event.preventDefault(); if (!activeLesson) return;
+    event.preventDefault(); if (!activeLesson || !preview || preview.term !== card.term.trim()) return;
     setBusy("card"); setError(""); setNotice("");
     try {
       await api(`/vocabulary/courses/${courseId}/lessons/${lessonId}/words`, { method: "POST", token: session.token,
-        body: manual ? card : { term: card.term } });
+        body: { term: preview.term, meaning: preview.meaning, pronunciation: preview.pronunciation,
+          forms: preview.forms, examples: preview.examples, example: preview.examples[0]?.target || "",
+          exampleTranslation: preview.examples[0]?.native || "" } });
       setCard(emptyCard); await loadLessons(courseId, lessonId);
     } catch (cause) {
       setError(errorText(cause));
-      if (!manual && ["AI_UNAVAILABLE", "AI_INVALID_RESPONSE", "AI_NOT_CONFIGURED", "AI_DAILY_LIMIT"].includes(cause.code)) setManual(true);
     } finally { setBusy(""); }
   }
 
@@ -148,16 +166,12 @@ export default function VocabularyPage({ session }) {
           {!todayLesson ? <form className="vocab-topic-form" onSubmit={createTopic}><Field label={t("todayTopic")} value={topic} onChange={(event) => setTopic(event.target.value)} placeholder={t("topicPlaceholder")} minLength={2} maxLength={100} required />
             <Button type="submit" loading={busy === "topic"}><Plus size={16} /> {t("createTopic")}</Button></form> : null}</Panel>
 
-        {activeLesson ? <><Panel className="vocab-add-panel"><div className="vocab-section-title"><div><span className="eyebrow">02 / {activeLesson.day}</span><h2>{activeLesson.topic}</h2><p>{manual ? t("manualHint") : t("aiHint")}</p></div><Badge tone="teal">{t("cardCount", { count: activeLesson.words.length })}</Badge></div>
-          <div className="vocab-entry-switch"><button type="button" className={!manual ? "active" : ""} onClick={() => setManual(false)}><Sparkles size={15} /> {t("aiEntry")}</button>
-            <button type="button" className={manual ? "active" : ""} onClick={() => setManual(true)}>{t("manualEntry")}</button></div>
+        {activeLesson ? <><Panel className="vocab-add-panel"><div className="vocab-section-title"><div><span className="eyebrow">02 / {activeLesson.day}</span><h2>{activeLesson.topic}</h2><p>So‘zni yozing. Gemini tarjima, talaffuz va misollarni avtomatik ko‘rsatadi.</p></div><Badge tone="teal">{t("cardCount", { count: activeLesson.words.length })}</Badge></div>
           <form className="vocab-card-form" onSubmit={addCard}><Field label={t("addWord")} value={card.term} onChange={(event) => setCard({ ...card, term: event.target.value })} placeholder={t("wordPlaceholder")} maxLength={120} required />
-            {manual ? <div className="vocab-manual-fields"><Field label={t("meaning")} value={card.meaning} onChange={(event) => setCard({ ...card, meaning: event.target.value })} maxLength={300} required />
-              <Field label={t("pronunciation")} value={card.pronunciation} onChange={(event) => setCard({ ...card, pronunciation: event.target.value })} maxLength={180} />
-              <Field label={t("example")} value={card.example} onChange={(event) => setCard({ ...card, example: event.target.value })} maxLength={500} />
-              <Field label={t("exampleTranslation")} value={card.exampleTranslation} onChange={(event) => setCard({ ...card, exampleTranslation: event.target.value })} maxLength={500} />
-              <Field label={t("forms")} value={card.forms} onChange={(event) => setCard({ ...card, forms: event.target.value })} maxLength={500} /></div> : null}
-            <Button type="submit" loading={busy === "card"}><Plus size={16} /> {manual ? t("saveCard") : t("createAiCard")}</Button></form></Panel>
+            {previewBusy ? <p className="vocab-preview-status" role="status"><Sparkles size={16} /> Gemini maslahat tayyorlamoqda...</p> : null}
+            {previewError ? <div className="vocab-preview-error" role="alert"><p>{previewError}</p><Button type="button" variant="secondary" onClick={() => setPreviewRetry((value) => value + 1)}>Qayta urinish</Button></div> : null}
+            {preview?.term === card.term.trim() ? <div className="vocab-ai-preview" role="status"><span className="eyebrow"><Sparkles size={15} /> GEMINI MASLAHATI</span><strong>{preview.meaning}</strong>{preview.pronunciation ? <p>{preview.pronunciation}</p> : null}{preview.forms ? <p>{preview.forms}</p> : null}{preview.examples.map((example, index) => <blockquote key={index}>{example.target}<small>{example.native}</small></blockquote>)}</div> : null}
+            <Button type="submit" loading={busy === "card"} disabled={!preview || preview.term !== card.term.trim()}><Plus size={16} /> {t("saveCard")}</Button></form></Panel>
 
           <div className="vocab-section-title"><div><span className="eyebrow">03 / {t("words")}</span><h2>{t("cardCount", { count: activeLesson.words.length })}</h2></div></div>
           {activeLesson.words.length ? <div className="vocab-card-grid">{activeLesson.words.map((word, index) => <article className="vocab-learning-card" key={word.id}>

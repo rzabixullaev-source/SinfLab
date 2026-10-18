@@ -18,7 +18,7 @@ import "./subject-room.css";
 
 const LabsTab = lazy(() => import("./room/LabsTab.jsx"));
 
-const roleName = { owner: "Xona egasi", teacher: "Ustoz", assistant: "Yordamchi ustoz", student: "O‘quvchi" };
+const roleName = { owner: "Ustoz", teacher: "Ustoz", assistant: "Yordamchi ustoz", student: "O‘quvchi", member: "A’zo" };
 
 export default function RoomPage({ session, roomId, tab, navigate, notify, demoMode }) {
   const [room, setRoom] = useState(null);
@@ -121,10 +121,14 @@ export default function RoomPage({ session, roomId, tab, navigate, notify, demoM
   if (loading) return <div className="room-loading"><div className="skeleton room-skeleton-head" /><div className="skeleton room-skeleton-card" /><div className="skeleton room-skeleton-card" /></div>;
   if (error || !room) return <Panel><EmptyState icon={BookOpen} title="Xonani ochib bo‘lmadi" description={error || "Ma’lumot topilmadi."} action={<Button onClick={refresh}>Qayta urinish</Button>} /></Panel>;
 
-  const staff = room.role !== "student";
+  const staff = room.mode === "course" && room.role !== "student";
   const nextLesson = data.lessons.filter((lesson) => lesson.startsAt && new Date(lesson.startsAt) >= new Date()).sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt))[0] || data.lessons[0];
   const activeSession = data.sessions.find((item) => item.status === "live");
-  const tabs = [
+  const tabs = room.mode === "club" ? [
+    { id: "overview", label: "Umumiy", icon: BookOpen },
+    { id: "chat", label: "Chat", icon: MessageCircle },
+    { id: "members", label: "A’zolar", icon: Users },
+  ] : [
     { id: "overview", label: "Umumiy", icon: BookOpen },
     { id: "lessons", label: "Darslar", icon: CalendarDays },
     { id: "assignments", label: "Vazifalar", icon: ClipboardList },
@@ -140,9 +144,10 @@ export default function RoomPage({ session, roomId, tab, navigate, notify, demoM
   ];
 
   return <div className={`page-enter room-page subject-${townForSubject(room.subject || room.name)}`}>
-    <div className="room-banner"><div><span className="eyebrow">{room.mode === "club" ? "O‘QUV KLUBI" : "KURS XONASI"} <span className="eyebrow-separator">·</span> {roleName[room.role]}</span><h1>{room.name}</h1><p>{room.description || "Birga o‘rganish va ishlash uchun o‘quv muhiti."}</p></div><div className="room-banner-actions">{staff ? <Button variant="secondary" onClick={() => { setInvite(null); setInviteOpen(true); }}><Users size={17} /> Taklif qilish</Button> : null}<span className="room-banner-icon"><FlaskConical size={37} strokeWidth={1.3} /></span></div></div>
+    <div className="room-banner"><div><span className="eyebrow">{room.mode === "club" ? "ODDIY CHAT GURUHI" : "USTOZLI SINF"} <span className="eyebrow-separator">·</span> {room.mode === "club" ? (room.role === "owner" ? "Yaratuvchi" : "A’zo") : roleName[room.role]}</span><h1>{room.name}</h1><p>{room.description || "Birga o‘rganish va ishlash uchun o‘quv muhiti."}</p></div><div className="room-banner-actions">{room.role === "owner" || staff ? <><Button variant="secondary" onClick={() => { window.location.hash = "/invitations"; }}><Users size={17} /> Email orqali taklif</Button><Button variant="secondary" onClick={() => { setInvite(null); setInviteOpen(true); }}>Kod yaratish</Button></> : null}<span className="room-banner-icon"><FlaskConical size={37} strokeWidth={1.3} /></span></div></div>
     <nav className="room-tabs" aria-label="Xona bo‘limlari">{tabs.map((item) => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => navigate(item.id)}><item.icon size={17} /> {item.label}</button>)}</nav>
-    {tab === "overview" ? <div className="room-overview">
+    {tab === "overview" && room.mode === "club" ? <Panel><SectionHeading eyebrow="CHAT GURUHI" title="Birga suhbatlashing" description="Bu guruhda ustoz va o‘quvchi rollari yo‘q. Barcha a’zolar chatda qatnashadi." /><Button onClick={() => navigate("chat")}>Chatni ochish <ArrowRight size={16} /></Button></Panel> : null}
+    {tab === "overview" && room.mode !== "club" ? <div className="room-overview">
       <div className="overview-main">
         <SectionHeading eyebrow="XONA HOLATI" title={staff ? "Dars muhiti" : "Sizning o‘qish yo‘lingiz"} description={staff ? "Darslar va o‘quvchilar faoliyati bir joyda." : "Navbatdagi dars va bajariladigan ishlar shu yerda."} />
         {activeSession ? <Panel className="live-callout"><span className="live-callout-icon"><Radio size={21} /></span><div><Badge tone="gold">JONLI DARS</Badge><h3>Dars hozir davom etmoqda</h3><p>Guruh bilan uchrashuvga o‘tishingiz mumkin.</p></div>{activeSession.joinUrl ? <a className="btn btn-gold" href={activeSession.joinUrl} target="_blank" rel="noopener noreferrer">Uchrashuvga o‘tish <ArrowRight size={17} /></a> : null}</Panel> : null}
@@ -167,6 +172,6 @@ export default function RoomPage({ session, roomId, tab, navigate, notify, demoM
     {tab === "chat" ? <ChatTab room={room} members={data.members} session={session} notify={notify} /> : null}
     {tab === "materials" ? <MaterialsTab room={room} session={session} notify={notify} /> : null}
     {tab === "members" ? <MembersTab room={room} members={data.members} session={session} refresh={refresh} notify={notify} /> : null}
-    {inviteOpen ? <Modal title="O‘quvchini taklif qilish" description="Kod faqat hozir ko‘rsatiladi. Uni kerakli odamga yuboring." onClose={() => setInviteOpen(false)}>{invite ? <div className="invite-result"><span className="eyebrow">TAKLIF KODI</span><code>{invite.code}</code><p>Kod {new Date(invite.expiresAt).toLocaleString("uz-UZ")} gacha amal qiladi.</p><Button onClick={copyCode}><Copy size={17} /> Kodni nusxalash</Button></div> : <div className="modal-form"><Select label="Taklif roli" value={inviteRole} onChange={(event) => setInviteRole(event.target.value)}><option value="student">O‘quvchi</option>{room.role === "owner" ? <><option value="teacher">Ustoz</option><option value="assistant">Yordamchi ustoz</option></> : null}</Select><div className="modal-actions"><Button variant="secondary" onClick={() => setInviteOpen(false)}>Bekor qilish</Button><Button onClick={makeInvite} loading={busy}>Kod yaratish <ArrowRight size={16} /></Button></div></div>}</Modal> : null}
+    {inviteOpen ? <Modal title="Guruhga taklif" description="Kod faqat shu yerda ko‘rsatiladi. Uni kerakli odamga yuboring." onClose={() => setInviteOpen(false)}>{invite ? <div className="invite-result"><span className="eyebrow">TAKLIF KODI</span><code>{invite.code}</code><p>Kod {new Date(invite.expiresAt).toLocaleString("uz-UZ")} gacha amal qiladi.</p><Button onClick={copyCode}><Copy size={17} /> Kodni nusxalash</Button></div> : <div className="modal-form">{room.mode === "course" ? <Select label="Taklif roli" value={inviteRole} onChange={(event) => setInviteRole(event.target.value)}><option value="student">O‘quvchi</option>{room.role === "owner" ? <><option value="teacher">Ustoz</option><option value="assistant">Yordamchi ustoz</option></> : null}</Select> : <p>Oddiy chatga qo‘shilganlar “A’zo” bo‘ladi.</p>}<div className="modal-actions"><Button variant="secondary" onClick={() => setInviteOpen(false)}>Bekor qilish</Button><Button onClick={makeInvite} loading={busy}>Kod yaratish <ArrowRight size={16} /></Button></div></div>}</Modal> : null}
   </div>;
 }

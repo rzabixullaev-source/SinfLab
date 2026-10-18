@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BookOpen, CalendarDays, ClipboardList, FlaskConical, GraduationCap, MapPinned, Plus, Sparkles, Users } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, ClipboardList, Copy, FlaskConical, GraduationCap, MapPinned, Plus, Sparkles, Users } from "lucide-react";
 import { api } from "../lib/api.js";
 import { Badge, Button, EmptyState, Panel, SectionHeading } from "../components/ui.jsx";
 import { todayLabel } from "../lib/date.js";
@@ -12,10 +12,10 @@ export default function Dashboard({ session, rooms, onOpenRoom, onCreate, onJoin
   const [progress, setProgress] = useState(null);
   const [parentInvite, setParentInvite] = useState(null);
   const [parentInviteError, setParentInviteError] = useState("");
-  const isStudent = rooms.some((room) => room.role === "student");
+  const [copiedCode, setCopiedCode] = useState(false);
   async function createParentInvite() {
     setParentInviteError("");
-    try { setParentInvite(await api("/parents/invites", { method: "POST", token: session.token, body: {} })); }
+    try { setParentInvite(await api("/parents/invites", { method: "POST", token: session.token, body: {} })); setCopiedCode(false); }
     catch (error) { setParentInviteError(error.message); }
   }
   const studentRoom = useMemo(() => rooms.find((room) => room.role === "student"), [rooms]);
@@ -28,7 +28,7 @@ export default function Dashboard({ session, rooms, onOpenRoom, onCreate, onJoin
     return () => { active = false; };
   }, [studentRoom, session.token]);
 
-  const teacherRooms = rooms.filter((room) => room.role !== "student");
+  const teacherRooms = rooms.filter((room) => room.mode === "course" && room.role !== "student");
   const focus = progress?.assignmentsToDo?.[0] || progress?.quizzesToDo?.[0] || progress?.upcomingLessons?.[0];
 
   return <div className="page-enter dashboard-page">
@@ -37,7 +37,7 @@ export default function Dashboard({ session, rooms, onOpenRoom, onCreate, onJoin
       <div className="intro-actions"><Button variant="secondary" onClick={onMap}><MapPinned size={17} /> {t("subjectMap")}</Button><Button variant="secondary" onClick={onJoin}>{t("joinCode")}</Button><Button onClick={onCreate}><Plus size={17} /> {t("newRoom")}</Button></div>
     </div>
 
-    {isStudent ? <Panel className="parent-link-panel"><div><strong>{t("connectParent")}</strong><p>{t("parentCodeHint")}</p></div><Button variant="secondary" onClick={createParentInvite}>{t("makeCode")}</Button>{parentInvite ? <code className="parent-invite-code">{parentInvite.code}</code> : null}{parentInviteError ? <p role="alert">{parentInviteError}</p> : null}</Panel> : null}
+    <Panel className="parent-link-panel"><div><strong>Ota-onaga ulashish kodi</strong><p>Ota-onangiz o‘z kabinetidagi “Farzandni bog‘lash” joyiga shu kodni kiritadi. Har bir akkaunt kod yaratishi mumkin.</p></div><Button variant="secondary" onClick={createParentInvite}>Farzand kodini yaratish</Button>{parentInvite ? <div className="parent-code-result"><code className="parent-invite-code">{parentInvite.code}</code><Button variant="secondary" onClick={async () => { try { await navigator.clipboard.writeText(parentInvite.code); setCopiedCode(true); } catch { setCopiedCode(false); } }}><Copy size={15} /> {copiedCode ? "Nusxalandi" : "Nusxalash"}</Button><small>{new Date(parentInvite.expiresAt).toLocaleString("uz-UZ")} gacha amal qiladi · bir marta ishlatiladi</small></div> : null}{parentInviteError ? <p role="alert">{parentInviteError}</p> : null}</Panel>
 
     <div className="dashboard-hero">
       <div className="hero-content"><span className="hero-eyebrow"><span className="live-dot" /> {t("heroKicker")}</span><h2>{t(studentRoom ? "continueLearning" : rooms.length ? "manageLearning" : "joinOrCreate")}</h2><p>{t(studentRoom ? focus ? "focusReady" : "allInOne" : rooms.length ? "manageRooms" : "firstRoomHint")}</p><Button variant="gold" onClick={() => studentRoom ? onOpenRoom(studentRoom.id) : rooms[0] ? onOpenRoom(rooms[0].id) : onCreate()}>{t(rooms.length ? "openRoom" : "createFirstRoom")}<ArrowRight size={17} /></Button></div>
@@ -55,7 +55,7 @@ export default function Dashboard({ session, rooms, onOpenRoom, onCreate, onJoin
       <div>
         <SectionHeading eyebrow={t("yourSpace")} title={t("learningRooms")} description={t("roomsIntro")} action={rooms.length ? <button className="text-link" onClick={onCreate}><Plus size={16} /> {t("createRoom")}</button> : null} />
         {rooms.length ? <div className="room-grid">{rooms.map((room) => <button className="room-card" key={room.id} onClick={() => onOpenRoom(room.id)}>
-          <div className="room-card-top"><span className="room-avatar"><FlaskConical size={23} /></span><Badge tone={room.role === "student" ? "neutral" : "teal"}>{t(room.role === "owner" ? "roomOwner" : room.role === "teacher" ? "teacher" : room.role === "assistant" ? "assistant" : "student")}</Badge></div>
+          <div className="room-card-top"><span className="room-avatar"><FlaskConical size={23} /></span><Badge tone={room.role === "student" || room.mode === "club" ? "neutral" : "teal"}>{room.mode === "club" ? (room.role === "owner" ? "Yaratuvchi" : "A’zo") : t(room.role === "owner" ? "teacher" : room.role === "teacher" ? "teacher" : room.role === "assistant" ? "assistant" : "student")}</Badge></div>
           <h3>{room.name}</h3><p>{room.subject || t(room.mode === "club" ? "studyClub" : "courseRoom")}</p><div className="room-card-bottom"><span>{room.mode === "club" ? "CLUB" : "COURSE"}</span><ArrowRight size={18} /></div>
         </button>)}</div> : <Panel><EmptyState icon={BookOpen} title={t("noRoomTitle")} description={t("noRoomText")} action={<div className="empty-actions"><Button onClick={onCreate}>{t("createRoom")}</Button><Button variant="secondary" onClick={onJoin}>{t("joinCode")}</Button></div>} /></Panel>}
       </div>

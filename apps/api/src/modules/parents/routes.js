@@ -96,8 +96,6 @@ export function parentsRouter({ db, config }) {
   router.use(requireAuth({ db, config }));
 
   router.post("/invites", async (request, response) => {
-    const studentMembership = await db.collection("classroom_members").findOne({ userId: request.user._id, role: "student", status: "active" });
-    if (!studentMembership) throw new HttpError(403, "FORBIDDEN", "Student membership required");
     const code = randomBytes(24).toString("base64url");
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
     await db.collection("parent_invites").insertOne({ _id: new ObjectId(), studentId: request.user._id, codeHash: hashCode(code), expiresAt, usedAt: null, createdAt: new Date() });

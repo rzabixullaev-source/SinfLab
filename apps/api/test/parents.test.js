@@ -49,7 +49,7 @@ test("parent sees only linked child's learning records and progress", async () =
     await requestJson(base, root + `/quizzes/${quiz.body.quiz.id}/attempts`, { method: "POST", token: student.token, body: { answers: [0] } });
     assert.equal((await requestJson(base, "/parents/children", { token: parent.token })).body.children.length, 0);
     assert.equal((await requestJson(base, `/parents/children/${student.user.id}`, { token: parent.token })).status, 404);
-    assert.equal((await requestJson(base, "/parents/invites", { method: "POST", token: parent.token, body: {} })).status, 403);
+    assert.equal((await requestJson(base, "/parents/invites", { method: "POST", token: parent.token, body: {} })).status, 201);
     const code = (await requestJson(base, "/parents/invites", { method: "POST", token: student.token, body: {} })).body.code;
     assert.equal((await requestJson(base, "/parents/link", { method: "POST", token: parent.token, body: { code } })).status, 201);
     assert.equal((await requestJson(base, "/parents/link", { method: "POST", token: stranger.token, body: { code } })).status, 400);
