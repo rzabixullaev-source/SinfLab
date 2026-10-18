@@ -12,6 +12,7 @@ test("local Atlas config accepts Wi-Fi and localhost origins", () => {
   assert.deepEqual(config.CORS_ORIGIN, ["http://192.168.96.99:5173", "http://localhost:5173"]);
   assert.equal(config.MONGODB_DB, "sinflab");
   assert.equal(config.BIND_HOST, "127.0.0.1");
+  assert.equal(config.TRUST_PROXY_HOPS, 0);
 });
 
 test("Railway listens on the public container interface", () => {
@@ -21,4 +22,5 @@ test("Railway listens on the public container interface", () => {
     RAILWAY_PROJECT_ID: "test-project",
   });
   assert.equal(config.BIND_HOST, "0.0.0.0");
+  assert.equal(config.TRUST_PROXY_HOPS, 1);
 });

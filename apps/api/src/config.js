@@ -3,6 +3,7 @@ import { z } from "zod";
 const environmentSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   BIND_HOST: z.enum(["127.0.0.1", "0.0.0.0"]).default("127.0.0.1"),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
   MONGODB_URI: z.string().min(1),
   MONGODB_DB: z.string().min(1).default("sinflab"),
   JWT_SECRET: z.string().min(32),
@@ -27,6 +28,7 @@ export function loadConfig(env = process.env) {
   return environmentSchema.parse({
     CORS_ORIGIN: defaultCorsOrigin,
     BIND_HOST: env.RAILWAY_PROJECT_ID ? "0.0.0.0" : "127.0.0.1",
+    TRUST_PROXY_HOPS: env.RAILWAY_PROJECT_ID ? 1 : 0,
     ...env,
   });
 }

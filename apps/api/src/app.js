@@ -22,6 +22,7 @@ import { gamesRouter } from "./modules/games/routes.js";
 export function createApp({ db, config }) {
   const app = express();
   app.disable("x-powered-by");
+  app.set("trust proxy", config.TRUST_PROXY_HOPS ?? 0);
   app.use(helmet());
   app.use(cors({ origin: config.CORS_ORIGIN }));
   app.use(express.json({ limit: "1mb" }));

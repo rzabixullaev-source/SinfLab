@@ -83,6 +83,7 @@ export async function downloadVocabularyPdf(book, token) {
 
 const messages = {
   INVALID_CREDENTIALS: "Email yoki parol xato.",
+  AUTH_RATE_LIMIT: "Kirishga urinishlar ko‘paydi. 15 daqiqadan keyin qayta urinib ko‘ring.",
   EMAIL_TAKEN: "Bu email allaqachon ro‘yxatdan o‘tgan.",
   INVALID_INVITE: "Taklif kodi xato yoki muddati tugagan.",
   VALIDATION_ERROR: "Ma’lumotlarni tekshirib qayta urinib ko‘ring.",

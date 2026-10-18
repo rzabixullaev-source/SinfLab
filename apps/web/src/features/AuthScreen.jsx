@@ -22,9 +22,7 @@ export default function AuthScreen({ onAuthenticate, demoMode }) {
     try {
       await onAuthenticate(mode, values);
     } catch (cause) {
-      setError(demoMode && cause?.code === "INVALID_CREDENTIALS"
-        ? "Bu mahalliy demoda server qayta ishga tushganda avval yaratilgan hisoblar o‘chadi. Demo hisob bilan kiring yoki qayta ro‘yxatdan o‘ting."
-        : errorText(cause));
+      setError(errorText(cause));
     } finally {
       setBusy(false);
     }

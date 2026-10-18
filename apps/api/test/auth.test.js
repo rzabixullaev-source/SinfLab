@@ -73,3 +73,56 @@ test("legacy account with stored role signs in with email and password only", as
     assert.equal((await requestJson(base, "/auth/me", { token: login.body.token })).status, 200);
   });
 });
+
+test("login limits repeated attempts per account without blocking classmates", async () => {
+  await withServer(memoryDb(), async (base) => {
+    const registered = await requestJson(base, "/auth/register", {
+      method: "POST", body: { displayName: "Real Student", email: "real@example.com", password: "strong-pass-123" },
+    });
+    assert.equal(registered.status, 201);
+    for (let index = 0; index < 40; index += 1) {
+      const result = await requestJson(base, "/auth/login", {
+        method: "POST", body: { email: `student${index}@example.com`, password: "incorrect" },
+      });
+      assert.equal(result.status, 401);
+    }
+    assert.equal((await requestJson(base, "/auth/login", {
+      method: "POST", body: { email: "real@example.com", password: "strong-pass-123" },
+    })).status, 200);
+    for (let index = 0; index < 15; index += 1) {
+      const result = await requestJson(base, "/auth/login", {
+        method: "POST", body: { email: index % 2 ? " BLOCKED@EXAMPLE.COM " : "blocked@example.com", password: "incorrect" },
+      });
+      assert.equal(result.status, 401);
+    }
+    const blocked = await requestJson(base, "/auth/login", {
+      method: "POST", body: { email: "blocked@example.com", password: "incorrect" },
+    });
+    assert.equal(blocked.status, 429);
+    assert.equal(blocked.body.error.code, "AUTH_RATE_LIMIT");
+    assert.equal((await requestJson(base, "/auth/login", {
+      method: "POST", body: { email: "another@example.com", password: "incorrect" },
+    })).status, 401);
+  });
+});
+
+test("account with missing password hash returns invalid credentials", async () => {
+  const db = memoryDb();
+  await db.collection("users").insertOne({ _id: new ObjectId(), emailLower: "broken@example.com", displayName: "Broken" });
+  await withServer(db, async (base) => {
+    const result = await requestJson(base, "/auth/login", {
+      method: "POST", body: { email: "broken@example.com", password: "any-password" },
+    });
+    assert.equal(result.status, 401);
+    assert.equal(result.body.error.code, "INVALID_CREDENTIALS");
+  });
+});
+
+test("simultaneous registration uses the same email error as an ordinary duplicate", async () => {
+  await withServer(memoryDb(), async (base) => {
+    const body = { displayName: "New Student", email: "new@example.com", password: "strong-pass-123" };
+    const attempts = await Promise.all(Array.from({ length: 2 }, () => requestJson(base, "/auth/register", { method: "POST", body })));
+    assert.deepEqual(attempts.map((item) => item.status).sort(), [201, 409]);
+    assert.equal(attempts.find((item) => item.status === 409).body.error.code, "EMAIL_TAKEN");
+  });
+});
