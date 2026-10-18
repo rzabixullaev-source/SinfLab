@@ -1,19 +1,51 @@
-import { useState } from "react";
-import { ArrowRight, Map } from "lucide-react";
-import { Button, Panel, SectionHeading } from "../components/ui.jsx";
-import { mapTowns } from "./subject-map.js";
+import { useEffect, useState } from "react";
+import { ArrowRight, BookOpen, CheckCircle2, Clock3, ClipboardList, Compass, FlaskConical, Gamepad2, MapPinned, RotateCcw, Sparkles } from "lucide-react";
+import { api, errorText } from "../lib/api.js";
+import { Badge, Button, Panel, SectionHeading } from "../components/ui.jsx";
+import { buildLearningPath, mapTowns } from "./subject-map.js";
+import TownScene from "./TownScene.jsx";
 import "./subject-map.css";
 
-export default function SubjectMap({ rooms, onOpenRoom, onJoin }) {
+const stepLabels = { lesson: "Dars", assignment: "Vazifa", quiz: "Test", lab: "Laboratoriya" };
+const states = { upcoming: "Rejada", available: "Tayyor", todo: "Bajarish kerak", done: "Topshirilgan", review: "Qayta ko‘rish" };
+const icons = { lesson: BookOpen, assignment: ClipboardList, quiz: CheckCircle2, lab: FlaskConical };
+
+export default function SubjectMap({ rooms, session, onOpenRoom, onJoin }) {
   const towns = mapTowns(rooms);
-  const [selected, setSelected] = useState(null);
-  const active = towns.find((town) => town.id === selected);
-  return <section className="subject-map-section">
-    <SectionHeading eyebrow="FANLAR XARITASI" title="Qaysi shaharchaga boramiz?" description="Fanni tanlang, keyin shu fandagi sinf xonasiga kiring." />
-    <div className="subject-map" aria-label="Fanlar xaritasi">{towns.map((town) => <button key={town.id} type="button" className={`subject-town town-${town.theme} ${selected === town.id ? "selected" : ""}`} onClick={() => setSelected(town.id)} aria-pressed={selected === town.id}>
-      <span className="town-sky"><span className="town-orbit" /><span className="town-icon">{town.icon}</span><span className="town-buildings"><i /><i /><i /></span></span>
-      <span className="town-info"><strong>{town.name}</strong><small>{town.rooms.length ? `${town.rooms.length} ta sinf` : "Sinf topilmadi"}</small></span>
+  const [selected, setSelected] = useState(() => towns.find((town) => town.rooms.length)?.id || "math");
+  const [selectedRoomId, setSelectedRoomId] = useState(null);
+  const [pathData, setPathData] = useState(null);
+  const [pathError, setPathError] = useState("");
+  const active = towns.find((town) => town.id === selected) || towns[0];
+  const room = active?.rooms.find((item) => item.id === selectedRoomId) || active?.rooms[0];
+
+  useEffect(() => {
+    if (!room || !session?.token) { setPathData(null); return; }
+    let current = true;
+    const prefix = `/classrooms/${room.id}`;
+    setPathData(null); setPathError("");
+    Promise.all(["lessons", "assignments", "quizzes", "labs", "my-progress"].map((route) => api(`${prefix}/${route}`, { token: session.token })))
+      .then(([lessons, assignments, quizzes, labs, progress]) => {
+        if (current) setPathData({ lessons: lessons.lessons, assignments: assignments.assignments, quizzes: quizzes.quizzes, labs: labs.labs, progress: progress.progress });
+      })
+      .catch((cause) => { if (current) setPathError(errorText(cause)); });
+    return () => { current = false; };
+  }, [room?.id, session?.token]);
+
+  const path = pathData ? buildLearningPath(pathData) : [];
+  const pending = path.filter((item) => item.state === "todo" || item.state === "review").length;
+  return <section className="subject-map-section" aria-label="Fanlar xaritasi">
+    <SectionHeading eyebrow="FANLAR OLAMI" title="O‘zingizga qiziq fan shaharchasini tanlang" description="Shaharchaga kiring, sinfni tanlang va shu fandagi o‘quv yo‘lingizni davom ettiring." />
+    <div className="subject-map" role="group" aria-label="Fan shaharchalari">{towns.map((town) => <button key={town.id} type="button" className={`subject-town town-${town.theme} ${active?.id === town.id ? "selected" : ""}`} onClick={() => { setSelected(town.id); setSelectedRoomId(null); }} aria-pressed={active?.id === town.id}>
+      <TownScene theme={town.theme} />
+      <span className="town-info"><span className="town-symbol" aria-hidden="true">{town.icon}</span><span><strong>{town.name}</strong><small>{town.tagline}</small></span><span className="town-count">{town.rooms.length} sinf</span></span>
     </button>)}</div>
-    {active ? <Panel className="town-detail"><div><span className="eyebrow"><Map size={14} /> {active.name.toUpperCase()}</span><h3>{active.name} shaharchasi</h3><p>{active.rooms.length ? "Sinfingizni tanlang va mashg‘ulotni davom ettiring." : "Bu fan bo‘yicha sinfga taklif kodi bilan qo‘shiling."}</p></div><div className="town-room-actions">{active.rooms.length ? active.rooms.map((room) => <Button key={room.id} variant="secondary" onClick={() => onOpenRoom(room.id)}>{room.name} <ArrowRight size={16} /></Button>) : <Button onClick={onJoin}>Sinfga qo‘shilish</Button>}</div></Panel> : null}
+    {active ? <div className={`town-world town-${active.theme}`}>
+      <div className="town-world-hero"><TownScene theme={active.theme} /><div className="town-world-copy"><span className="eyebrow"><MapPinned size={15} /> FAN SHAHARCHASI</span><h3>{active.name}</h3><p>{active.tagline}. {active.rooms.length ? "O‘quv yo‘lingiz shu yerdan davom etadi." : "Hozircha bu fanda sinfingiz yo‘q."}</p><Badge tone="teal">{active.rooms.length} TA SINF</Badge></div></div>
+      {active.rooms.length ? <div className="town-world-content"><div className="town-classroom-picker"><span className="eyebrow"><Compass size={15} /> SINFNI TANLANG</span><div>{active.rooms.map((item) => <button type="button" key={item.id} className={room?.id === item.id ? "active" : ""} onClick={() => setSelectedRoomId(item.id)} aria-pressed={room?.id === item.id}>{item.name}<ArrowRight size={15} /></button>)}</div></div>
+        {room ? <><div className="town-route-heading"><div><span className="eyebrow">O‘QUV YO‘LI</span><h4>{room.name}</h4><p>Dars va mashqlar ustoz joylagan tartibda ko‘rsatiladi.</p></div><Button onClick={() => onOpenRoom(room.id)}><ArrowRight size={16} /> Sinfga kirish</Button></div>
+          {pathError ? <Panel><p role="alert">{pathError}</p><Button variant="secondary" onClick={() => onOpenRoom(room.id)}>Sinfda ko‘rish</Button></Panel> : !pathData ? <Panel className="town-path-loading"><Clock3 size={18} /> O‘quv yo‘li yuklanmoqda...</Panel> : path.length ? <><div className="town-route-summary"><span><BookOpen size={16} /> {path.filter((item) => item.kind === "lesson").length} dars</span><span><ClipboardList size={16} /> {pending} navbatdagi ish</span><span><Sparkles size={16} /> {path.length} qadam</span></div><ol className="town-path">{path.map((step, index) => { const Icon = icons[step.kind]; return <li key={`${step.kind}-${step.id}`} className={`path-${step.state}`}><button type="button" onClick={() => onOpenRoom(room.id, step.tab)}><span className="path-number">{String(index + 1).padStart(2, "0")}</span><span className="path-icon"><Icon size={20} /></span><span className="path-copy"><small>{stepLabels[step.kind]}</small><strong>{step.title}</strong></span><span className="path-state">{step.state === "review" ? <RotateCcw size={14} /> : null}{states[step.state]}</span><ArrowRight className="path-arrow" size={18} /></button></li>; })}</ol></> : <Panel className="town-path-empty"><BookOpen size={25} /><strong>O‘quv yo‘li hali boshlanmagan</strong><p>Ustoz dars yoki mashq qo‘shganda bu yerda qadamlar paydo bo‘ladi.</p></Panel>}
+          <div className="town-shortcuts"><button type="button" onClick={() => onOpenRoom(room.id, "labs")}><FlaskConical size={18} /> Laboratoriya <ArrowRight size={15} /></button><button type="button" onClick={() => onOpenRoom(room.id, "games")}><Gamepad2 size={18} /> O‘yinlar <ArrowRight size={15} /></button><button type="button" onClick={() => onOpenRoom(room.id, "ai")}><Sparkles size={18} /> AI yordamchi <ArrowRight size={15} /></button></div></> : null}</div> : <div className="town-empty"><p>Ustoz yuborgan kod bilan shu fan sinfiga qo‘shiling.</p><Button onClick={onJoin}>Sinfga qo‘shilish <ArrowRight size={16} /></Button></div>}
+    </div> : null}
   </section>;
 }

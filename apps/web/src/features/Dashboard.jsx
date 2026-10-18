@@ -50,7 +50,7 @@ export default function Dashboard({ session, rooms, onOpenRoom, onCreate, onJoin
       <Panel className="stat-card"><span className="stat-icon violet"><Sparkles size={20} /></span><strong>{progress?.reviewQueue?.length ?? 0}</strong><span>Qayta ko‘rish</span></Panel>
     </div>
 
-    {isStudent ? <SubjectMap rooms={rooms.filter((room) => room.role === "student")} onOpenRoom={onOpenRoom} onJoin={onJoin} /> : null}
+    {isStudent ? <SubjectMap rooms={rooms.filter((room) => room.role === "student")} session={session} onOpenRoom={onOpenRoom} onJoin={onJoin} /> : null}
 
     <div className="dashboard-columns">
       <div>
