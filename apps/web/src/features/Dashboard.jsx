@@ -3,11 +3,20 @@ import { ArrowRight, BookOpen, CalendarDays, ClipboardList, FlaskConical, Gradua
 import { api } from "../lib/api.js";
 import { Badge, Button, EmptyState, Panel, SectionHeading } from "../components/ui.jsx";
 import { todayLabel } from "../lib/date.js";
+import SubjectMap from "./SubjectMap.jsx";
 
 const firstName = (name) => name?.trim().split(/\s+/)[0] || "Do‘st";
 
-export default function Dashboard({ session, rooms, entryRole = "teacher", onOpenRoom, onCreate, onJoin }) {
+export default function Dashboard({ session, rooms, onOpenRoom, onCreate, onJoin }) {
   const [progress, setProgress] = useState(null);
+  const [parentInvite, setParentInvite] = useState(null);
+  const [parentInviteError, setParentInviteError] = useState("");
+  const isStudent = rooms.some((room) => room.role === "student");
+  async function createParentInvite() {
+    setParentInviteError("");
+    try { setParentInvite(await api("/parents/invites", { method: "POST", token: session.token, body: {} })); }
+    catch (error) { setParentInviteError(error.message); }
+  }
   const studentRoom = useMemo(() => rooms.find((room) => room.role === "student"), [rooms]);
   useEffect(() => {
     if (!studentRoom) { setProgress(null); return; }
@@ -27,8 +36,10 @@ export default function Dashboard({ session, rooms, entryRole = "teacher", onOpe
       <div className="intro-actions"><Button variant="secondary" onClick={onJoin}>Kod bilan qo‘shilish</Button><Button onClick={onCreate}><Plus size={17} /> Yangi xona</Button></div>
     </div>
 
+    {isStudent ? <Panel className="parent-link-panel"><div><strong>Ota-onani bog‘lash</strong><p>Bir martalik kodni faqat ota-onangizga yuboring. Kod 48 soat amal qiladi.</p></div><Button variant="secondary" onClick={createParentInvite}>Kod yaratish</Button>{parentInvite ? <code className="parent-invite-code">{parentInvite.code}</code> : null}{parentInviteError ? <p role="alert">{parentInviteError}</p> : null}</Panel> : null}
+
     <div className="dashboard-hero">
-      <div className="hero-content"><span className="hero-eyebrow"><span className="live-dot" /> BIR JOYDA, BIR MAQSADDA</span><h2>{studentRoom ? "Bugungi o‘qishni davom ettiring" : entryRole === "student" && !rooms.length ? "Ustozingiz guruhiga qo‘shiling" : "Ta’limni tartib bilan boshqaring"}</h2><p>{studentRoom ? focus ? "Sizni kutayotgan navbatdagi ish tayyor. Davom etish uchun xonaga o‘ting." : "Darslar, vazifalar va laboratoriyalar bir joyda." : entryRole === "student" && !rooms.length ? "Ustoz yuborgan taklif kodini kiriting va darslarga qo‘shiling." : "Xonalarni yarating, darslarni rejalang va har bir o‘quvchining ishini kuzating."}</p><Button variant="gold" onClick={() => studentRoom ? onOpenRoom(studentRoom.id) : rooms[0] ? onOpenRoom(rooms[0].id) : entryRole === "student" ? onJoin() : onCreate()}>{rooms.length ? "Xonaga o‘tish" : entryRole === "student" ? "Kod bilan qo‘shilish" : "Birinchi xonani yaratish"}<ArrowRight size={17} /></Button></div>
+      <div className="hero-content"><span className="hero-eyebrow"><span className="live-dot" /> BIR JOYDA, BIR MAQSADDA</span><h2>{studentRoom ? "Bugungi o‘qishni davom ettiring" : rooms.length ? "Ta’limni tartib bilan boshqaring" : "Guruh yarating yoki taklif bilan qo‘shiling"}</h2><p>{studentRoom ? focus ? "Sizni kutayotgan navbatdagi ish tayyor. Davom etish uchun xonaga o‘ting." : "Darslar, vazifalar va laboratoriyalar bir joyda." : rooms.length ? "Xonalarni boshqaring, darslarni rejalang va o‘quvchilarning ishini kuzating." : "O‘zingiz guruh yaratsangiz ustoz bo‘lasiz. Taklif kodi bilan qo‘shilsangiz rolingizni sinf ustozi belgilaydi."}</p><Button variant="gold" onClick={() => studentRoom ? onOpenRoom(studentRoom.id) : rooms[0] ? onOpenRoom(rooms[0].id) : onCreate()}>{rooms.length ? "Xonaga o‘tish" : "Birinchi xonani yaratish"}<ArrowRight size={17} /></Button></div>
       <div className="hero-visual" aria-hidden="true"><div className="hero-ring hero-ring-1" /><div className="hero-ring hero-ring-2" /><div className="hero-symbol"><GraduationCap size={60} strokeWidth={1.1} /></div><span className="hero-corner-label">SINF / LAB · 2026</span></div>
     </div>
 
@@ -38,6 +49,8 @@ export default function Dashboard({ session, rooms, entryRole = "teacher", onOpe
       <Panel className="stat-card"><span className="stat-icon blue"><ClipboardList size={20} /></span><strong>{progress?.assignmentsToDo?.length ?? 0}</strong><span>Navbatdagi vazifalar</span></Panel>
       <Panel className="stat-card"><span className="stat-icon violet"><Sparkles size={20} /></span><strong>{progress?.reviewQueue?.length ?? 0}</strong><span>Qayta ko‘rish</span></Panel>
     </div>
+
+    {isStudent ? <SubjectMap rooms={rooms.filter((room) => room.role === "student")} onOpenRoom={onOpenRoom} onJoin={onJoin} /> : null}
 
     <div className="dashboard-columns">
       <div>

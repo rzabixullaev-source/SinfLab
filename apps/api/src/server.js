@@ -1,12 +1,14 @@
-import "dotenv/config";
+import { fileURLToPath } from "node:url";
+import { config as loadDotEnv } from "dotenv";
 import { createApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { connectMongo } from "./mongo.js";
 import { attachLiveSignaling } from "./modules/live/signaling.js";
 
+loadDotEnv({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 const config = loadConfig();
 const { client, db } = await connectMongo(config);
-const server = createApp({ db, config }).listen(config.PORT, () => {
+const server = createApp({ db, config }).listen(config.PORT, "127.0.0.1", () => {
   console.log("SinfLab API listening on port " + config.PORT);
 });
 const signaling = attachLiveSignaling(server, { db, config });

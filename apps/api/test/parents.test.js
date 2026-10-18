@@ -1,0 +1,74 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { memoryDb, requestJson, withServer } from "./helpers.js";
+
+test("one login works for old accounts and classroom roles follow ownership and invitations", async () => {
+  await withServer(memoryDb(), async (base) => {
+    const register = (name, role) => requestJson(base, "/auth/register", { method: "POST", body: { displayName: name, email: name.toLowerCase() + "@example.com", password: "strong-pass-123", role } });
+    const owner = (await register("RoleTeacher", "teacher")).body;
+    const member = (await register("RoleStudent", "student")).body;
+    const guest = (await register("RoleParent", "parent")).body;
+    assert.equal((await requestJson(base, "/auth/login", { method: "POST", body: { email: "rolestudent@example.com", password: "strong-pass-123" } })).status, 200);
+    assert.equal((await requestJson(base, "/auth/login", { method: "POST", body: { email: "roleteacher@example.com", password: "strong-pass-123", role: "student" } })).status, 200);
+    assert.equal((await requestJson(base, "/auth/login", { method: "POST", body: { email: "roleteacher@example.com", password: "wrong-password" } })).status, 401);
+    const room = await requestJson(base, "/classrooms", { method: "POST", token: owner.token, body: { name: "Physics room", mode: "course" } });
+    assert.equal(room.body.classroom.role, "owner");
+    const invite = await requestJson(base, `/classrooms/${room.body.classroom.id}/invites`, { method: "POST", token: owner.token, body: { role: "student" } });
+    const joined = await requestJson(base, "/classrooms/join", { method: "POST", token: member.token, body: { code: invite.body.invite.code } });
+    assert.equal(joined.body.classroom.role, "student");
+    const promoted = await requestJson(base, `/classrooms/${room.body.classroom.id}/members/${member.user.id}`, { method: "PATCH", token: owner.token, body: { role: "teacher" } });
+    assert.equal(promoted.body.role, "teacher");
+    const ownRoom = await requestJson(base, "/classrooms", { method: "POST", token: member.token, body: { name: "Own room", mode: "course" } });
+    assert.equal(ownRoom.body.classroom.role, "owner");
+    const guestJoin = await requestJson(base, "/classrooms/join", { method: "POST", token: guest.token, body: { code: invite.body.invite.code } });
+    assert.equal(guestJoin.body.classroom.role, "student");
+  });
+});
+
+test("parent sees only linked child's learning records and progress", async () => {
+  await withServer(memoryDb(), async (base) => {
+    const register = async (name, role) => (await requestJson(base, "/auth/register", { method: "POST", body: { displayName: name, email: name.toLowerCase() + "@example.com", password: "strong-pass-123", role } })).body;
+    const teacher = await register("ParentTeacher", "teacher");
+    const student = await register("LinkedStudent", "student");
+    const other = await register("OtherStudent", "student");
+    const parent = await register("RealParent", "parent");
+    const stranger = await register("OtherParent", "parent");
+    const room = await requestJson(base, "/classrooms", { method: "POST", token: teacher.token, body: { name: "Physics room", mode: "course" } });
+    const root = `/classrooms/${room.body.classroom.id}`;
+    const invite = await requestJson(base, root + "/invites", { method: "POST", token: teacher.token, body: { role: "student" } });
+    await requestJson(base, "/classrooms/join", { method: "POST", token: student.token, body: { code: invite.body.invite.code } });
+    await requestJson(base, "/classrooms/join", { method: "POST", token: other.token, body: { code: invite.body.invite.code } });
+    const assignment = await requestJson(base, root + "/assignments", { method: "POST", token: teacher.token, body: { title: "Ohm task", instructions: "Solve the formula" } });
+    await requestJson(base, root + `/assignments/${assignment.body.assignment.id}/publish`, { method: "POST", token: teacher.token, body: {} });
+    const submitted = await requestJson(base, root + `/assignments/${assignment.body.assignment.id}/submissions`, { method: "POST", token: student.token, body: { body: "My solution" } });
+    assert.equal((await requestJson(base, root + "/teaching-overview", { token: teacher.token })).body.overview.awaitingFeedback, 1);
+    await requestJson(base, root + `/assignments/${assignment.body.assignment.id}/submissions/${submitted.body.submission.id}/feedback`, { method: "POST", token: teacher.token, body: { body: "Good", score: 90 } });
+    assert.equal((await requestJson(base, root + "/teaching-overview", { token: teacher.token })).body.overview.awaitingFeedback, 0);
+    const quiz = await requestJson(base, root + "/quizzes", { method: "POST", token: teacher.token, body: { title: "Ohm quiz", questions: [{ prompt: "Current unit?", choices: ["Ampere", "Volt"], correctIndex: 0 }] } });
+    await requestJson(base, root + `/quizzes/${quiz.body.quiz.id}/publish`, { method: "POST", token: teacher.token, body: {} });
+    await requestJson(base, root + `/quizzes/${quiz.body.quiz.id}/attempts`, { method: "POST", token: student.token, body: { answers: [0] } });
+    assert.equal((await requestJson(base, "/parents/children", { token: parent.token })).body.children.length, 0);
+    assert.equal((await requestJson(base, `/parents/children/${student.user.id}`, { token: parent.token })).status, 404);
+    assert.equal((await requestJson(base, "/parents/invites", { method: "POST", token: parent.token, body: {} })).status, 403);
+    const code = (await requestJson(base, "/parents/invites", { method: "POST", token: student.token, body: {} })).body.code;
+    assert.equal((await requestJson(base, "/parents/link", { method: "POST", token: parent.token, body: { code } })).status, 201);
+    assert.equal((await requestJson(base, "/parents/link", { method: "POST", token: stranger.token, body: { code } })).status, 400);
+    const overview = await requestJson(base, `/parents/children/${student.user.id}`, { token: parent.token });
+    assert.equal(overview.status, 200);
+    assert.equal(overview.body.stats.assignmentsCompleted, 1);
+    assert.equal(overview.body.stats.quizAveragePercent, 100);
+    assert.equal(overview.body.activity.some((item) => item.kind === "quiz" && item.result === 100), true);
+    assert.equal(overview.body.classrooms[0].assignments[0].revisions[0].body, "My solution");
+    assert.equal(overview.body.classrooms[0].assignments[0].feedback[0].body, "Good");
+    assert.equal(overview.body.classrooms[0].quizzes[0].correctIndex, undefined);
+    assert.equal(overview.body.classrooms[0].report.stats.assignmentsAccepted, 1);
+    assert.equal(overview.body.classrooms[0].report.stats.quizAveragePercent, 100);
+    assert.equal(overview.body.classrooms[0].report.timeline.some((item) => item.kind === "assignment" && item.title === "Ohm task"), true);
+    const teacherReport = await requestJson(base, `${root}/students/${student.user.id}/report`, { token: teacher.token });
+    assert.equal(teacherReport.body.report.stats.assignmentsAccepted, 1);
+    assert.equal(teacherReport.body.report.stats.quizAveragePercent, 100);
+    assert.equal((await requestJson(base, `${root}/students/${student.user.id}/report`, { token: other.token })).status, 403);
+    assert.equal((await requestJson(base, `/parents/children/${other.user.id}`, { token: parent.token })).status, 404);
+    assert.equal((await requestJson(base, `/parents/children/${student.user.id}`, { token: stranger.token })).status, 404);
+  });
+});

@@ -46,14 +46,14 @@ export default function ZoomClassroom({ room, item, session, demoMode, onActivat
   }, []);
 
   const refreshHands = useCallback(async () => {
-    if (item.status !== "live") return;
+    if (item.status !== "live" || room.role === "observer") return;
     const result = await api(prefix + "/hand", { token: session.token });
     if (host) setHands(result.hands);
     else if (student) setMyHand(result.hand);
   }, [prefix, session.token, item.status, host, student]);
 
   useEffect(() => {
-    if (item.status !== "live") return;
+    if (item.status !== "live" || room.role === "observer") return;
     let active = true;
     const tick = async () => {
       try {
@@ -119,7 +119,7 @@ export default function ZoomClassroom({ room, item, session, demoMode, onActivat
   async function connect() {
     setConnecting(true); setError("");
     try {
-      const access = await api(prefix + "/zoom-token", { method: "POST", token: session.token });
+      const access = await api(room.role === "observer" ? `/parents/live-sessions/${item.id}/zoom-token` : prefix + "/zoom-token", { method: "POST", token: session.token });
       stopPreview();
       const { default: ZoomVideo } = await import("@zoom/videosdk");
       const client = ZoomVideo.createClient();
@@ -154,7 +154,7 @@ export default function ZoomClassroom({ room, item, session, demoMode, onActivat
         }
       }
       setConnected(true);
-      await api(prefix + "/check-in", { method: "POST", token: session.token }).catch(() => {});
+      if (room.role !== "observer") await api(prefix + "/check-in", { method: "POST", token: session.token }).catch(() => {});
       for (const user of client.getAllUser()) {
         if (user.bVideoOn) showVideo(user.userId, user.displayName);
       }
@@ -207,7 +207,7 @@ export default function ZoomClassroom({ room, item, session, demoMode, onActivat
       streamRef.current = null;
       tilesRef.current.forEach((tile) => tile.remove());
       tilesRef.current.clear();
-      await api(prefix + "/check-out", { method: "POST", token: session.token }).catch(() => {});
+      if (room.role !== "observer") await api(prefix + "/check-out", { method: "POST", token: session.token }).catch(() => {});
       setConnected(false); setAudioEnabled(false); setSpeaking(false); setVideoOn(false);
       speakingRef.current = false;
       notify("Darsdan chiqdingiz.");

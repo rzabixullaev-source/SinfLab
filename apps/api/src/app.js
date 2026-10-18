@@ -10,9 +10,14 @@ import { resourcesRouter } from "./modules/resources/routes.js";
 import { assignmentsRouter } from "./modules/assignments/routes.js";
 import { submissionsRouter } from "./modules/assignments/submissions.js";
 import { quizzesRouter } from "./modules/quizzes/routes.js";
-import { liveRouter } from "./modules/live/routes.js";
+import { liveRouter, parentLiveRouter } from "./modules/live/routes.js";
 import { labsRouter } from "./modules/labs/routes.js";
 import { progressRouter } from "./modules/progress/routes.js";
+import { parentsRouter } from "./modules/parents/routes.js";
+import { activityRouter } from "./modules/activity/routes.js";
+import { aiRouter } from "./modules/ai/routes.js";
+import { vocabularyRouter } from "./modules/vocabulary/routes.js";
+import { gamesRouter } from "./modules/games/routes.js";
 
 export function createApp({ db, config }) {
   const app = express();
@@ -28,6 +33,9 @@ export function createApp({ db, config }) {
     response.json({ status: "ready" });
   });
   app.use("/api/v1/auth", authRouter({ db, config }));
+  app.use("/api/v1/parents", parentsRouter({ db, config }));
+  app.use("/api/v1/parents", parentLiveRouter({ db, config }));
+  app.use("/api/v1/vocabulary", vocabularyRouter({ db, config }));
   app.use("/api/v1/classrooms", liveRouter({ db, config }));
   app.use("/api/v1/classrooms", classroomsRouter({ db, config }));
   app.use("/api/v1/classrooms", lessonsRouter({ db, config }));
@@ -38,6 +46,9 @@ export function createApp({ db, config }) {
   app.use("/api/v1/classrooms", quizzesRouter({ db, config }));
   app.use("/api/v1/classrooms", labsRouter({ db, config }));
   app.use("/api/v1/classrooms", progressRouter({ db, config }));
+  app.use("/api/v1/classrooms", activityRouter({ db, config }));
+  app.use("/api/v1/classrooms", aiRouter({ db, config }));
+  app.use("/api/v1/classrooms", gamesRouter({ db, config }));
   app.use((_request, _response, next) => next(new HttpError(404, "NOT_FOUND", "Route not found")));
   app.use(errorHandler);
   return app;

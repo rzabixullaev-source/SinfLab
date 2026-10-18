@@ -13,6 +13,7 @@ function matches(document, query) {
     if (expected && typeof expected === "object" && !(expected instanceof ObjectId) && !(expected instanceof Date)) {
       if ("$in" in expected) return expected.$in.some((item) => equalValue(actual, item));
       if ("$gt" in expected) return actual > expected.$gt;
+      if ("$gte" in expected) return actual >= expected.$gte;
       if ("$lt" in expected) return actual < expected.$lt;
     }
     return equalValue(actual, expected);

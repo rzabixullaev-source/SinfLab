@@ -8,13 +8,24 @@ import { attachLiveSignaling } from "./modules/live/signaling.js";
 loadDotEnv({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 const db = memoryDb();
 const config = {
-  CORS_ORIGIN: "http://127.0.0.1:5173",
+  CORS_ORIGIN: [
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+    ...(process.env.DEMO_WEB_ORIGIN ? [process.env.DEMO_WEB_ORIGIN] : []),
+  ],
   JWT_SECRET: "sinflab-demo-only-secret-not-for-production-2026",
   ZOOM_VIDEO_SDK_KEY: process.env.ZOOM_VIDEO_SDK_KEY || "",
   ZOOM_VIDEO_SDK_SECRET: process.env.ZOOM_VIDEO_SDK_SECRET || "",
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
+  GEMINI_MODEL: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
 };
+let finishSeed;
+const seeded = new Promise((resolve) => { finishSeed = resolve; });
 const app = express();
-app.get("/api/v1/demo-status", (_request, response) => response.json({ demo: true }));
+app.get("/api/v1/demo-status", async (_request, response) => {
+  await seeded;
+  response.json({ demo: true });
+});
 app.use(createApp({ db, config }));
 
 const server = app.listen(4000, "127.0.0.1", async () => {
@@ -40,6 +51,9 @@ const server = app.listen(4000, "127.0.0.1", async () => {
     const student = await call("/auth/register", {
       displayName: "Madina Aliyeva", email: "oquvchi@sinflab.uz", password: "Demo2026!",
     });
+    const parent = await call("/auth/register", {
+      displayName: "Madina ota-onasi", email: "otaona@sinflab.uz", password: "Demo2026!",
+    });
     const room = await call("/classrooms", {
       name: "Fizika 9-sinf", subject: "Fizika", mode: "course",
       description: "Nazariya, tajriba va mustaqil mashqlar bir joyda.",
@@ -47,6 +61,8 @@ const server = app.listen(4000, "127.0.0.1", async () => {
     const root = "/classrooms/" + room.classroom.id;
     const invite = await call(root + "/invites", { role: "student" }, teacher.token);
     await call("/classrooms/join", { code: invite.invite.code }, student.token);
+    const parentInvite = await call("/parents/invites", {}, student.token);
+    await call("/parents/link", { code: parentInvite.code }, parent.token);
     const lesson = await call(root + "/lessons", {
       title: "Elektr zanjiri va Om qonuni",
       description: "Tok kuchi, kuchlanish va qarshilik orasidagi bog‘lanishni tajribada ko‘ramiz.",
@@ -79,6 +95,8 @@ const server = app.listen(4000, "127.0.0.1", async () => {
     console.log("SinfLab demo API: http://127.0.0.1:4000");
     console.log("Teacher: ustoz@sinflab.uz / Demo2026!");
     console.log("Student: oquvchi@sinflab.uz / Demo2026!");
+    console.log("Parent: otaona@sinflab.uz / Demo2026!");
+    finishSeed();
   } catch (error) {
     console.error("Demo seed failed:", error);
     server.close();

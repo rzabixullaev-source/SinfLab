@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import bcrypt from "bcryptjs";
+import { ObjectId } from "mongodb";
 import { memoryDb, requestJson, withServer } from "./helpers.js";
 
 test("register, profile and login work without exposing password hash", async () => {
@@ -20,7 +22,7 @@ test("register, profile and login work without exposing password hash", async ()
 
     const login = await requestJson(base, "/auth/login", {
       method: "POST",
-      body: { email: "AZIZA@example.com", password: "strong-pass-123" },
+      body: { email: " AZIZA@example.com ", password: "strong-pass-123" },
     });
     assert.equal(login.status, 200);
     assert.equal(login.body.user.id, registered.body.user.id);
@@ -52,5 +54,22 @@ test("registration validates input", async () => {
     });
     assert.equal(invalid.status, 400);
     assert.equal(invalid.body.error.code, "VALIDATION_ERROR");
+  });
+});
+
+test("legacy account with stored role signs in with email and password only", async () => {
+  const db = memoryDb();
+  await db.collection("users").insertOne({
+    _id: new ObjectId(), displayName: "Old Teacher", emailLower: "old@example.com",
+    accountRole: "teacher", passwordHash: await bcrypt.hash("strong-pass-123", 4),
+    createdAt: new Date(), updatedAt: new Date(),
+  });
+  await withServer(db, async (base) => {
+    const login = await requestJson(base, "/auth/login", {
+      method: "POST", body: { email: "old@example.com", password: "strong-pass-123" },
+    });
+    assert.equal(login.status, 200);
+    assert.equal(login.body.user.displayName, "Old Teacher");
+    assert.equal((await requestJson(base, "/auth/me", { token: login.body.token })).status, 200);
   });
 });

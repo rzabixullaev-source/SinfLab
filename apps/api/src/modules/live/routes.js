@@ -8,6 +8,7 @@ import { requireAuth } from "../auth/auth.js";
 import { classroomAccess, requireTeachingRole } from "../../shared/access.js";
 import { HttpError } from "../../shared/errors.js";
 import { parseObjectId } from "../../shared/ids.js";
+import { parentObserverAccess } from "./parent-access.js";
 
 function publicSession(item) {
   return {
@@ -286,5 +287,34 @@ export function liveRouter({ db, config }) {
     })) });
   });
 
+  return router;
+}
+
+export function parentLiveRouter({ db, config }) {
+  const router = Router();
+  router.use(requireAuth({ db, config }));
+
+  router.get("/live-alerts", async (request, response) => {
+    const links = await db.collection("parent_links").find({ parentId: request.user._id }).toArray();
+    const memberships = await db.collection("classroom_members").find({ userId: { $in: links.map((link) => link.studentId) }, role: "student", status: "active" }).toArray();
+    const classroomIds = [...new Map(memberships.map((item) => [String(item.classroomId), item.classroomId])).values()];
+    if (!classroomIds.length) return response.json({ alerts: [] });
+    const [sessions, classrooms] = await Promise.all([
+      db.collection("live_sessions").find({ classroomId: { $in: classroomIds }, provider: { $in: ["zoom_video_sdk", "browser_webrtc"] }, status: "live" }).toArray(),
+      db.collection("classrooms").find({ _id: { $in: classroomIds }, status: "active" }).toArray(),
+    ]);
+    const names = new Map(classrooms.map((room) => [String(room._id), room.name]));
+    response.json({ alerts: sessions.filter((item) => names.has(String(item.classroomId))).map((item) => ({ session: publicSession(item), classroomName: names.get(String(item.classroomId)) })) });
+  });
+
+  router.post("/live-sessions/:sessionId/zoom-token", async (request, response) => {
+    const item = await db.collection("live_sessions").findOne({ _id: parseObjectId(request.params.sessionId), provider: "zoom_video_sdk", status: "live" });
+    if (!item) throw new HttpError(404, "SESSION_NOT_FOUND", "Live session not found");
+    await parentObserverAccess(db, request.user._id, item.classroomId);
+    if (!config.ZOOM_VIDEO_SDK_KEY || !config.ZOOM_VIDEO_SDK_SECRET) throw new HttpError(503, "ZOOM_NOT_CONFIGURED", "Zoom Video SDK credentials are not configured");
+    const now = Math.floor(Date.now() / 1000);
+    const token = jwt.sign({ app_key: config.ZOOM_VIDEO_SDK_KEY, role_type: 0, tpc: item.sessionName, version: 1, user_key: String(request.user._id), video_webrtc_mode: 1, audio_webrtc_mode: 1, iat: now, exp: now + 60 * 60 * 2 }, config.ZOOM_VIDEO_SDK_SECRET, { algorithm: "HS256" });
+    response.json({ sessionName: item.sessionName, token, userName: request.user.displayName, host: false, observer: true });
+  });
   return router;
 }

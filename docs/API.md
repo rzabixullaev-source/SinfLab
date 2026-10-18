@@ -4,18 +4,27 @@ Base URL: /api/v1. JSON so‘rovlar application/json; material yuklash applicati
 
 ## Kirish
 
-- POST /auth/register — displayName, email, password.
-- POST /auth/login — email, password.
+- POST /auth/register — displayName, email, password. Avvalgi mijozlar yuboradigan role maydoni qabul qilinadi, lekin hisob huquqini belgilamaydi.
+- POST /auth/login — email, password. Sinfdagi rol login paytida tanlanmaydi.
 - GET /auth/me — joriy foydalanuvchi.
 - GET /health, GET /ready — server va baza tayyorligi.
 
+## Ota-ona
+
+- POST /parents/invites — kamida bitta sinfda o‘quvchi bo‘lgan foydalanuvchi ota-onasi uchun 48 soatlik bir martalik kod yaratadi.
+- POST /parents/link — ota-ona `{ "code": "..." }` yuborib farzand hisobiga bog‘lanadi.
+- GET /parents/children — ota-onaga bog‘langan farzandlar.
+- GET /parents/children/:studentId — faqat bog‘langan farzandning xonalari, darslari, vazifalari, topshirgan ishlari, ustoz izohlari, test va laboratoriya natijalari, davomat va yig‘ma statistika. Test javob kaliti berilmaydi.
+- GET /parents/my-parents — o‘quvchiga bog‘langan ota-onalar.
+- DELETE /parents/children/:studentId — ota-ona o‘z bog‘lanishini o‘chiradi; o‘quvchi o‘chirsa bodyda `parentId` yuboradi.
+
 ## Xona
 
-- POST /classrooms — name, subject?, description?, mode: course yoki club.
+- POST /classrooms — name, subject?, description?, mode: course yoki club. Yaratgan foydalanuvchi shu sinf egasi va ustozi bo‘ladi.
 - GET /classrooms; GET /classrooms/:classroomId.
 - GET /classrooms/:classroomId/members.
 - POST /classrooms/:classroomId/invites — role?, expiresInHours?, maxUses?. Kod faqat yaratishda qaytadi.
-- POST /classrooms/join — code.
+- POST /classrooms/join — code. Sinfdagi rol taklif kodida ustoz belgilagan rolga teng bo‘ladi.
 - DELETE /classrooms/:classroomId/invites/:inviteId.
 - PATCH /classrooms/:classroomId/members/:userId — role? yoki status?.
 

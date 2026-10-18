@@ -39,6 +39,10 @@ export async function connectMongo(config) {
 export async function ensureIndexes(db) {
   await Promise.all([
     db.collection("users").createIndex({ emailLower: 1 }, { unique: true }),
+    db.collection("parent_invites").createIndex({ codeHash: 1 }, { unique: true }),
+    db.collection("parent_invites").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 86400 }),
+    db.collection("parent_links").createIndex({ parentId: 1, studentId: 1 }, { unique: true }),
+    db.collection("parent_links").createIndex({ studentId: 1 }),
     db.collection("classroom_members").createIndex(
       { classroomId: 1, userId: 1 },
       { unique: true },
@@ -53,6 +57,7 @@ export async function ensureIndexes(db) {
     db.collection("assets").createIndex({ classroomId: 1, folderId: 1, createdAt: -1 }),
     db.collection("assignments").createIndex({ classroomId: 1, status: 1, createdAt: -1 }),
     db.collection("submissions").createIndex({ assignmentId: 1, studentId: 1 }, { unique: true }),
+    db.collection("submissions").createIndex({ classroomId: 1, status: 1 }),
     db.collection("submission_revisions").createIndex({ submissionId: 1, version: 1 }, { unique: true }),
     db.collection("feedback").createIndex({ submissionId: 1, version: 1 }, { unique: true }),
     db.collection("quizzes").createIndex({ classroomId: 1, status: 1, createdAt: -1 }),
@@ -62,5 +67,11 @@ export async function ensureIndexes(db) {
     db.collection("attendance").createIndex({ sessionId: 1, userId: 1, leftAt: 1 }),
     db.collection("lab_activities").createIndex({ classroomId: 1, createdAt: -1 }),
     db.collection("lab_runs").createIndex({ labId: 1, studentId: 1, createdAt: -1 }),
+    db.collection("learning_activity").createIndex({ classroomId: 1, studentId: 1, createdAt: -1 }),
+    db.collection("learning_activity").createIndex({ classroomId: 1, createdAt: -1 }),
+    db.collection("teaching_guides").createIndex({ classroomId: 1 }, { unique: true }),
+    db.collection("vocabulary_words").createIndex({ ownerId: 1, createdAt: -1 }),
+    db.collection("vocabulary_books").createIndex({ published: 1, createdAt: -1 }),
+    db.collection("game_attempts").createIndex({ classroomId: 1, studentId: 1, quizId: 1, questionIndex: 1, mode: 1 }, { unique: true }),
   ]);
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import { Hand, Maximize2, Mic, MicOff, Minimize2, Radio, Video, VideoOff } from "lucide-react";
 import { api, errorText, liveSignalUrl } from "../../lib/api.js";
 import { Badge, Button } from "../../components/ui.jsx";
@@ -13,6 +13,7 @@ const iceServers = [{ urls: "stun:stun.l.google.com:19302" }];
 export default function BrowserClassroom({ room, item, session, onActivated, onEnded, notify }) {
   const host = item.hostId === session.user.id;
   const student = room.role === "student";
+  const observer = room.role === "observer";
   const prefix = `/classrooms/${room.id}/live-sessions/${item.id}`;
   const roomRef = useRef(null);
   const previewRef = useRef(null);
@@ -39,11 +40,11 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
   const [board, setBoard] = useState([]);
 
   const refreshHands = useCallback(async () => {
-    if (item.status !== "live") return;
+    if (item.status !== "live" || observer) return;
     const result = await api(prefix + "/hand", { token: session.token });
     if (host) setHands(result.hands);
     else if (student) setMyHand(result.hand);
-  }, [prefix, session.token, item.status, host, student]);
+  }, [prefix, session.token, item.status, host, student, observer]);
 
   useEffect(() => {
     if (item.status !== "live") return;
@@ -132,11 +133,11 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
     for (const candidate of peer.pending.splice(0)) await peer.pc.addIceCandidate(candidate);
   }
 
-  async function offerTo(userId) {
+  async function offerTo(userId, recipientObserver = false) {
     if (!localStreamRef.current) return;
     const peer = createPeer(userId);
     localStreamRef.current.getTracks().forEach((track) => peer.pc.addTrack(track, localStreamRef.current));
-    peer.pc.addTransceiver("audio", { direction: "recvonly" });
+    if (!recipientObserver) peer.pc.addTransceiver("audio", { direction: "recvonly" });
     await peer.pc.setLocalDescription(await peer.pc.createOffer());
     signal({ type: "offer", targetId: userId, description: peer.pc.localDescription });
   }
@@ -150,14 +151,14 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
           const result = await api(prefix + "/activate", { method: "POST", token: session.token });
           onActivated(result.session);
         }
-        for (const peer of message.peers.filter((entry) => !entry.host)) await offerTo(peer.userId);
+        for (const peer of message.peers.filter((entry) => !entry.host)) await offerTo(peer.userId, peer.observer);
         notify("Kamera darsi boshlandi. Guruh o‘quvchilariga xabar yuborildi.");
       } else notify("Kamera darsiga qo‘shildingiz.");
-      await api(prefix + "/check-in", { method: "POST", token: session.token }).catch(() => {});
+      if (student || host) await api(prefix + "/check-in", { method: "POST", token: session.token }).catch(() => {});
     } else if (message.type === "board-update") {
       setBoard(message.elements ?? []);
     } else if (message.type === "peer-joined" && host && !message.host) {
-      await offerTo(message.userId);
+      await offerTo(message.userId, message.observer);
     } else if (message.type === "peer-left") {
       closePeer(message.userId);
       if (!host) {
@@ -169,7 +170,7 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
       await peer.pc.setRemoteDescription(message.description);
       const audioLines = peer.pc.getTransceivers().filter((entry) => entry.receiver.track.kind === "audio");
       const micLine = audioLines.at(-1);
-      if (micLine) { micLine.direction = "sendonly"; micSenderRef.current = micLine.sender; }
+      if (student && micLine) { micLine.direction = "sendonly"; micSenderRef.current = micLine.sender; }
       await peer.pc.setLocalDescription(await peer.pc.createAnswer());
       await flushCandidates(peer);
       signal({ type: "answer", targetId: message.fromId, description: peer.pc.localDescription });
@@ -188,7 +189,7 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
   async function connect() {
     setConnecting(true); setError("");
     try {
-      if (!window.RTCPeerConnection || !navigator.mediaDevices?.getUserMedia) throw new Error("Kamera darsi uchun localhost yoki HTTPS va WebRTC brauzer kerak.");
+      if (!window.RTCPeerConnection || (host && !navigator.mediaDevices?.getUserMedia)) throw new Error("Kamera darsi uchun localhost yoki HTTPS va WebRTC brauzer kerak.");
       if (host) {
         stopPreview();
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -276,7 +277,7 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
   }
 
   async function leave() {
-    await api(prefix + "/check-out", { method: "POST", token: session.token }).catch(() => {});
+    if (!observer) await api(prefix + "/check-out", { method: "POST", token: session.token }).catch(() => {});
     cleanup();
     notify("Darsdan chiqdingiz.");
   }
@@ -310,7 +311,7 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
     <div ref={audioHostRef} hidden />
     <div className="zoom-controls">{item.status === "ended" ? <p className="muted">Bu dars yakunlangan.</p> : <>
       {!connected ? <><Button onClick={connect} loading={connecting}><Radio size={17} /> {host ? "Kamera darsini boshlash" : "Darsga qo‘shilish"}</Button>{host ? <Button variant="secondary" onClick={previewCamera} disabled={busy || connecting}>{previewOn ? "Sinovni yopish" : "Kamerani sinash"}</Button> : null}</> : <>
-        {host ? <><Button variant="secondary" onClick={() => { const track = localStreamRef.current?.getVideoTracks()[0]; if (track) { track.enabled = !track.enabled; setVideoOn(track.enabled); } }}>{videoOn ? <VideoOff size={17} /> : <Video size={17} />}{videoOn ? "Kamerani o‘chirish" : "Kamerani yoqish"}</Button><Button variant={micOn ? "gold" : "secondary"} onClick={() => { const track = localStreamRef.current?.getAudioTracks()[0]; if (track) { track.enabled = !track.enabled; setMicOn(track.enabled); } }}>{micOn ? <Mic size={17} /> : <MicOff size={17} />}{micOn ? "Mikrofonni o‘chirish" : "Mikrofonni yoqish"}</Button></> : <><Button variant={micOn ? "gold" : "secondary"} onClick={toggleStudentMic} disabled={myHand?.status !== "approved" || busy || !micSenderRef.current}>{micOn ? <Mic size={17} /> : <MicOff size={17} />}{micOn ? "Mikrofonni o‘chirish" : "Mikrofonni yoqish"}</Button><Button variant="secondary" onClick={leave}>Darsdan chiqish</Button></>}
+        {host ? <><Button variant="secondary" onClick={() => { const track = localStreamRef.current?.getVideoTracks()[0]; if (track) { track.enabled = !track.enabled; setVideoOn(track.enabled); } }}>{videoOn ? <VideoOff size={17} /> : <Video size={17} />}{videoOn ? "Kamerani o‘chirish" : "Kamerani yoqish"}</Button><Button variant={micOn ? "gold" : "secondary"} onClick={() => { const track = localStreamRef.current?.getAudioTracks()[0]; if (track) { track.enabled = !track.enabled; setMicOn(track.enabled); } }}>{micOn ? <Mic size={17} /> : <MicOff size={17} />}{micOn ? "Mikrofonni o‘chirish" : "Mikrofonni yoqish"}</Button></> : <>{student ? <Button variant={micOn ? "gold" : "secondary"} onClick={toggleStudentMic} disabled={myHand?.status !== "approved" || busy || !micSenderRef.current}>{micOn ? <Mic size={17} /> : <MicOff size={17} />}{micOn ? "Mikrofonni o‘chirish" : "Mikrofonni yoqish"}</Button> : null}<Button variant="secondary" onClick={leave}>Darsdan chiqish</Button></>}
       </>}{host ? <Button variant="secondary" onClick={finish} loading={busy}>Darsni yakunlash</Button> : null}
     </>}</div>
     <LiveBoard elements={board} connected={connected} canEdit={host && connected && item.status !== "ended"} onChange={(elements) => { setBoard(elements); signal({ type: "board-update", elements }); }} />

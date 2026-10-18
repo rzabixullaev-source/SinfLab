@@ -3,13 +3,15 @@ export { studioTools, studioScenarios, studioById, studioInventory, studioSubjec
 
 export const registerSchema = z.object({
   displayName: z.string().trim().min(2).max(80),
-  email: z.email().transform((value) => value.toLowerCase()),
+  email: z.string().trim().email().transform((value) => value.toLowerCase()),
   password: z.string().min(8).max(128),
+  role: z.enum(["teacher", "student", "parent"]).optional(),
 }).strict();
 
 export const loginSchema = z.object({
-  email: z.email().transform((value) => value.toLowerCase()),
+  email: z.string().trim().email().transform((value) => value.toLowerCase()),
   password: z.string().min(1),
+  role: z.enum(["teacher", "student", "parent"]).optional(),
 }).strict();
 
 export const classroomSchema = z.object({

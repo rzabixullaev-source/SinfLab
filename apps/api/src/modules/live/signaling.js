@@ -3,6 +3,7 @@ import { authenticateToken } from "../auth/auth.js";
 import { classroomAccess } from "../../shared/access.js";
 import { parseObjectId } from "../../shared/ids.js";
 import { boardElementsSchema } from "./board.js";
+import { parentObserverAccess } from "./parent-access.js";
 
 const PATH = "/api/v1/live-signal";
 
@@ -16,7 +17,10 @@ export function attachLiveSignaling(server, { db, config }) {
   server.on("upgrade", (request, socket, head) => {
     const path = new URL(request.url, "http://localhost").pathname;
     if (path !== PATH) return;
-    if (request.headers.origin !== config.CORS_ORIGIN) {
+    const allowedOrigins = Array.isArray(config.CORS_ORIGIN)
+      ? config.CORS_ORIGIN
+      : [config.CORS_ORIGIN];
+    if (!allowedOrigins.includes(request.headers.origin)) {
       socket.destroy();
       return;
     }
@@ -36,23 +40,32 @@ export function attachLiveSignaling(server, { db, config }) {
         if (message?.type !== "join") { socket.close(1008, "Join required"); return; }
         try {
           const user = await authenticateToken(db, config, message.token);
-          const { classroomId, membership } = await classroomAccess(db, message.classroomId, user._id);
+          let classroomId;
+          let membership;
+          let observer = false;
+          try {
+            ({ classroomId, membership } = await classroomAccess(db, message.classroomId, user._id));
+          } catch {
+            classroomId = parseObjectId(message.classroomId);
+            await parentObserverAccess(db, user._id, classroomId);
+            observer = true;
+          }
           const sessionId = parseObjectId(message.sessionId);
           const session = await db.collection("live_sessions").findOne({ _id: sessionId, classroomId });
           if (!session || session.provider !== "browser_webrtc") throw new Error("Session unavailable");
           const host = session.createdBy.equals(user._id);
-          if (!host && membership.role !== "student") throw new Error("Student access required");
+          if (!host && !observer && membership.role !== "student") throw new Error("Student access required");
           if (session.status !== "live" && !(host && session.status === "preparing")) throw new Error("Session is not live");
-          identity = { userId: String(user._id), name: user.displayName, host, sessionId: String(sessionId) };
+          identity = { userId: String(user._id), name: user.displayName, host, observer, sessionId: String(sessionId) };
           clearTimeout(timeout);
           let room = rooms.get(identity.sessionId);
           if (!room) { room = new Map(); rooms.set(identity.sessionId, room); }
           room.get(identity.userId)?.close(1000, "Rejoined");
           room.set(identity.userId, socket);
-          const peers = [...room.entries()].filter(([id]) => id !== identity.userId).map(([id, peer]) => ({ userId: id, name: peer.identity.name, host: peer.identity.host }));
+          const peers = [...room.entries()].filter(([id]) => id !== identity.userId).map(([id, peer]) => ({ userId: id, name: peer.identity.name, host: peer.identity.host, observer: peer.identity.observer }));
           socket.identity = identity;
           send(socket, { type: "joined", userId: identity.userId, host, peers, board: session.board ?? [] });
-          for (const [id, peer] of room) if (id !== identity.userId) send(peer, { type: "peer-joined", userId: identity.userId, name: identity.name, host });
+          for (const [id, peer] of room) if (id !== identity.userId) send(peer, { type: "peer-joined", userId: identity.userId, name: identity.name, host, observer });
         } catch {
           socket.close(1008, "Not allowed in this class");
         }

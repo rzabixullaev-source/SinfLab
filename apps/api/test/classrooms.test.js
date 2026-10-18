@@ -60,7 +60,7 @@ test("owner creates course, student joins once, and room data stays private", as
   });
 });
 
-test("owner can change roles; teacher cannot grant staff role", async () => {
+test("owner can promote a member; invited teacher cannot grant staff role", async () => {
   await withServer(memoryDb(), async (base) => {
     const owner = await register(base, "Owner");
     const learner = await register(base, "Learner");
@@ -79,16 +79,23 @@ test("owner can change roles; teacher cannot grant staff role", async () => {
       method: "PATCH", token: owner.token, body: { role: "teacher" },
     });
     assert.equal(changed.status, 200);
+    const staff = await register(base, "StaffTeacher");
+    const staffInvite = await requestJson(base, "/classrooms/" + roomId + "/invites", {
+      method: "POST", token: owner.token, body: { role: "teacher" },
+    });
+    assert.equal((await requestJson(base, "/classrooms/join", {
+      method: "POST", token: staff.token, body: { code: staffInvite.body.invite.code },
+    })).status, 201);
     const forbidden = await requestJson(base, "/classrooms/" + roomId + "/invites", {
-      method: "POST", token: learner.token, body: { role: "assistant" },
+      method: "POST", token: staff.token, body: { role: "assistant" },
     });
     assert.equal(forbidden.status, 403);
     const allowed = await requestJson(base, "/classrooms/" + roomId + "/invites", {
-      method: "POST", token: learner.token, body: { role: "student" },
+      method: "POST", token: staff.token, body: { role: "student" },
     });
     assert.equal(allowed.status, 201);
     const revoked = await fetch(base + "/api/v1/classrooms/" + roomId + "/invites/" + allowed.body.invite.id, {
-      method: "DELETE", headers: { authorization: "Bearer " + learner.token },
+      method: "DELETE", headers: { authorization: "Bearer " + staff.token },
     });
     assert.equal(revoked.status, 204);
   });

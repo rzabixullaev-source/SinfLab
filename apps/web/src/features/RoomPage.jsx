@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, BookOpen, CalendarDays, CheckCircle2, ClipboardList, Copy, FlaskConical, Hash, MessageCircle, Radio, Target, Users } from "lucide-react";
+import { ArrowRight, BookOpen, Bot, CalendarDays, CheckCircle2, ClipboardList, Copy, FlaskConical, Gamepad2, Hash, MessageCircle, Radio, Target, Users } from "lucide-react";
 import { api, errorText } from "../lib/api.js";
 import { Badge, Button, EmptyState, Modal, Panel, SectionHeading, Select } from "../components/ui.jsx";
 import { dateTimeLabel } from "../lib/date.js";
@@ -11,6 +11,10 @@ import AssignmentsTab from "./room/AssignmentsTab.jsx";
 import QuizzesTab from "./room/QuizzesTab.jsx";
 import LiveTab from "./room/LiveTab.jsx";
 import ProgressTab from "./room/ProgressTab.jsx";
+import AiTab from "./room/AiTab.jsx";
+import GamesTab from "./room/GamesTab.jsx";
+import { townForSubject } from "./subject-map.js";
+import "./subject-room.css";
 
 const LabsTab = lazy(() => import("./room/LabsTab.jsx"));
 
@@ -58,6 +62,31 @@ export default function RoomPage({ session, roomId, tab, navigate, notify, demoM
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  useEffect(() => {
+    if (room?.role !== "student") return;
+    let lastTick = Date.now();
+    let lastInteraction = Date.now();
+    const interacted = () => { lastInteraction = Date.now(); };
+    const send = () => {
+      const now = Date.now();
+      const seconds = Math.min(30, Math.floor((now - lastTick) / 1000));
+      lastTick = now;
+      if (document.visibilityState !== "visible" || now - lastInteraction > 120000 || seconds < 1) return;
+      api(`/classrooms/${roomId}/activity`, { method: "POST", token: session.token, body: { area: tab, seconds } }).catch(() => {});
+    };
+    window.addEventListener("pointerdown", interacted);
+    window.addEventListener("keydown", interacted);
+    window.addEventListener("scroll", interacted, { passive: true });
+    const timer = window.setInterval(send, 30000);
+    return () => {
+      window.clearInterval(timer);
+      send();
+      window.removeEventListener("pointerdown", interacted);
+      window.removeEventListener("keydown", interacted);
+      window.removeEventListener("scroll", interacted);
+    };
+  }, [room?.role, roomId, session.token, tab]);
+
   const refreshProgress = useCallback(async () => {
     const result = await api("/classrooms/" + roomId + "/my-progress", { token: session.token });
     setProgress(result.progress);
@@ -100,6 +129,8 @@ export default function RoomPage({ session, roomId, tab, navigate, notify, demoM
     { id: "lessons", label: "Darslar", icon: CalendarDays },
     { id: "assignments", label: "Vazifalar", icon: ClipboardList },
     { id: "quizzes", label: "Testlar", icon: CheckCircle2 },
+    { id: "ai", label: "Yordamchi AI", icon: Bot },
+    { id: "games", label: "O‘yinlar", icon: Gamepad2 },
     { id: "live", label: "Jonli dars", icon: Radio },
     { id: "labs", label: "Laboratoriya", icon: FlaskConical },
     ...(!staff ? [{ id: "progress", label: "Mening rejam", icon: Target }] : []),
@@ -108,7 +139,7 @@ export default function RoomPage({ session, roomId, tab, navigate, notify, demoM
     { id: "members", label: "A’zolar", icon: Users },
   ];
 
-  return <div className="page-enter room-page">
+  return <div className={`page-enter room-page subject-${townForSubject(room.subject || room.name)}`}>
     <div className="room-banner"><div><span className="eyebrow">{room.mode === "club" ? "O‘QUV KLUBI" : "KURS XONASI"} <span className="eyebrow-separator">·</span> {roleName[room.role]}</span><h1>{room.name}</h1><p>{room.description || "Birga o‘rganish va ishlash uchun o‘quv muhiti."}</p></div><div className="room-banner-actions">{staff ? <Button variant="secondary" onClick={() => { setInvite(null); setInviteOpen(true); }}><Users size={17} /> Taklif qilish</Button> : null}<span className="room-banner-icon"><FlaskConical size={37} strokeWidth={1.3} /></span></div></div>
     <nav className="room-tabs" aria-label="Xona bo‘limlari">{tabs.map((item) => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => navigate(item.id)}><item.icon size={17} /> {item.label}</button>)}</nav>
     {tab === "overview" ? <div className="room-overview">
@@ -128,6 +159,8 @@ export default function RoomPage({ session, roomId, tab, navigate, notify, demoM
     {tab === "lessons" ? <LessonsTab room={room} lessons={data.lessons} session={session} refresh={refresh} notify={notify} /> : null}
     {tab === "assignments" ? <AssignmentsTab room={room} assignments={data.assignments} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /> : null}
     {tab === "quizzes" ? <QuizzesTab room={room} quizzes={data.quizzes} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /> : null}
+    {tab === "ai" ? <AiTab room={room} session={session} /> : null}
+    {tab === "games" ? <GamesTab room={room} session={session} /> : null}
     {tab === "live" ? <LiveTab room={room} sessions={data.sessions} lessons={data.lessons} session={session} onSessionChange={updateLiveSession} notify={notify} demoMode={demoMode} /> : null}
     {tab === "labs" ? <Suspense fallback={<Panel><p className="muted">Laboratoriya yuklanmoqda...</p></Panel>}><LabsTab room={room} labs={data.labs} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /></Suspense> : null}
     {tab === "progress" && !staff ? <ProgressTab progress={progress} navigate={navigate} room={room} session={session} /> : null}

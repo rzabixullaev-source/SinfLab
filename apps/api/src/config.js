@@ -5,9 +5,13 @@ const environmentSchema = z.object({
   MONGODB_URI: z.string().min(1),
   MONGODB_DB: z.string().min(1).default("sinflab"),
   JWT_SECRET: z.string().min(32),
-  CORS_ORIGIN: z.string().url().default("http://localhost:5173"),
+  CORS_ORIGIN: z.string().default("http://localhost:5173")
+    .transform((value) => value.split(",").map((origin) => origin.trim()).filter(Boolean))
+    .pipe(z.array(z.url()).min(1)),
   ZOOM_VIDEO_SDK_KEY: z.string().optional(),
   ZOOM_VIDEO_SDK_SECRET: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().optional(),
 });
 
 export function loadConfig(env = process.env) {
