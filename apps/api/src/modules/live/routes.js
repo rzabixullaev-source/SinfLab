@@ -55,6 +55,22 @@ async function sessionFor(db, classroomId, sessionIdText) {
   return item;
 }
 
+function browserIceServers(config) {
+  const iceServers = [{ urls: "stun:stun.l.google.com:19302" }];
+  if (config.LIVE_TURN_URL) {
+    if (!config.LIVE_TURN_USERNAME || !config.LIVE_TURN_CREDENTIAL) {
+      throw new HttpError(503, "TURN_NOT_CONFIGURED", "TURN username and credential are required");
+    }
+    iceServers.push({ urls: config.LIVE_TURN_URL, username: config.LIVE_TURN_USERNAME, credential: config.LIVE_TURN_CREDENTIAL });
+  }
+  return iceServers;
+}
+
+function sendIceServers(response, config) {
+  response.set("Cache-Control", "no-store");
+  response.json({ iceServers: browserIceServers(config) });
+}
+
 export function liveRouter({ db, config }) {
   const router = Router();
   router.use(requireAuth({ db, config }));
@@ -97,6 +113,16 @@ export function liveRouter({ db, config }) {
 
   router.post("/:classroomId/live-sessions/browser", (request, response) => {
     return createInteractive(request, response, "browser_webrtc");
+  });
+
+  router.get("/:classroomId/live-sessions/:sessionId/ice-servers", async (request, response) => {
+    const { classroomId, membership } = await classroomAccess(db, request.params.classroomId, request.user._id);
+    const item = await sessionFor(db, classroomId, request.params.sessionId);
+    if (item.provider !== "browser_webrtc") throw new HttpError(404, "SESSION_NOT_FOUND", "Browser class not found");
+    if (item.status !== "live" && !(item.status === "preparing" && item.createdBy.equals(request.user._id) && membership.role !== "student")) {
+      throw new HttpError(409, "SESSION_ENDED", "Live session is unavailable");
+    }
+    sendIceServers(response, config);
   });
 
   router.post("/:classroomId/live-sessions/zoom", (request, response) => {
@@ -293,6 +319,13 @@ export function liveRouter({ db, config }) {
 export function parentLiveRouter({ db, config }) {
   const router = Router();
   router.use(requireAuth({ db, config }));
+
+  router.get("/live-sessions/:sessionId/ice-servers", async (request, response) => {
+    const item = await db.collection("live_sessions").findOne({ _id: parseObjectId(request.params.sessionId), provider: "browser_webrtc", status: "live" });
+    if (!item) throw new HttpError(404, "SESSION_NOT_FOUND", "Live session not found");
+    await parentObserverAccess(db, request.user._id, item.classroomId);
+    sendIceServers(response, config);
+  });
 
   router.get("/live-alerts", async (request, response) => {
     const links = await db.collection("parent_links").find({ parentId: request.user._id }).toArray();

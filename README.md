@@ -41,6 +41,8 @@ Ro‘yxatdan o‘tish → xona ochish → taklif bilan qo‘shilish → dars va 
 Asosiy jonli dars brauzer kamerasi va WebRTC orqali ishlaydi; Zoom kalitlari kerak emas. Ustoz guruhda kamera darsini boshlab, o‘quvchilarga platforma ichida xabar yuboradi. O‘quvchi qo‘l ko‘taradi; ustoz ruxsat bergach o‘quvchi mikrofonini yoqadi. Ustoz jonli doskada qalam, shakl va matndan foydalanadi, shakllarni katakka yopishtirib tekislaydi; o‘quvchilar doskani ko‘radi. Interaktiv studiyada kimyo, fizika, biologiya va kiberxavfsizlik uchun 10 tadan, jami 40 ta ssenariy bor: o‘quvchi 3D sahnadagi asbob yoki reagentni olib ish maydoniga qo‘yadi, parametrlarni o‘zgartiradi va kuzatuvni jurnalga saqlaydi. 3D sahna protsedurali tekstura, shisha va metall materiallardan foydalanadi; kiberxavfsizlik yopiq simulyatsion muhitda ishlaydi. Natija serverda hisoblanadi. Oldingi sodda laboratoriyalar ham alohida bo‘limda saqlangan. Bular o‘quv simulyatsiyalari, haqiqiy laboratoriya yoki tarmoqni almashtirmaydi. Tayyor tashqi Zoom/Meet havolasi ham saqlangan, Zoom Video SDK esa keyingi bosqich uchun kodda qoladi. AI test yaratish keyingi bosqichda; ota-ona kabineti ishlaydi.
 
 Zoom kalitlarini olish va demo cheklovlari: docs/ZOOM_CLASSROOM.md.
+
+Turli tarmoqlardagi brauzer jonli darsi uchun API muhitiga `LIVE_TURN_URL`, `LIVE_TURN_USERNAME`, `LIVE_TURN_CREDENTIAL` qo'shiladi. Bu qiymatlar bo'lmasa WebRTC STUN orqali ulanadi va ayrim tarmoqlarda video aloqa o'rnatilmasligi mumkin.
 Brauzer kamera darsi va uning tarmoq talablari: docs/CAMERA_CLASSROOM.md.
 
 ## Hujjatlar

@@ -8,7 +8,6 @@ const handText = {
   raised: "Qo‘l ko‘tarilgan", approved: "Gapirishga ruxsat berilgan",
   denied: "Ruxsat berilmadi", revoked: "Ruxsat qaytarildi", lowered: "Qo‘l tushirildi",
 };
-const iceServers = [{ urls: "stun:stun.l.google.com:19302" }];
 
 export default function BrowserClassroom({ room, item, session, onActivated, onEnded, notify }) {
   const host = item.hostId === session.user.id;
@@ -26,6 +25,7 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
   const micSenderRef = useRef(null);
   const socketRef = useRef(null);
   const peersRef = useRef(new Map());
+  const iceServersRef = useRef([]);
   const [hands, setHands] = useState([]);
   const [myHand, setMyHand] = useState(null);
   const [connected, setConnected] = useState(false);
@@ -106,7 +106,7 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
 
   function createPeer(userId) {
     closePeer(userId);
-    const pc = new RTCPeerConnection({ iceServers });
+    const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
     const peer = { pc, pending: [], audio: null };
     peersRef.current.set(userId, peer);
     setParticipantCount(peersRef.current.size);
@@ -190,6 +190,9 @@ export default function BrowserClassroom({ room, item, session, onActivated, onE
     setConnecting(true); setError("");
     try {
       if (!window.RTCPeerConnection || (host && !navigator.mediaDevices?.getUserMedia)) throw new Error("Kamera darsi uchun localhost yoki HTTPS va WebRTC brauzer kerak.");
+      const icePath = observer ? `/parents/live-sessions/${item.id}/ice-servers` : prefix + "/ice-servers";
+      const iceConfig = await api(icePath, { token: session.token });
+      iceServersRef.current = iceConfig.iceServers;
       if (host) {
         stopPreview();
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });

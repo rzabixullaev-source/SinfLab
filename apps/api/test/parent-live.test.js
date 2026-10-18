@@ -8,7 +8,7 @@ import { memoryDb, requestJson } from "./helpers.js";
 
 test("linked parent receives live alert, Zoom observer token, and browser watch access", async () => {
   const db = memoryDb();
-  const config = { CORS_ORIGIN: "http://localhost:5173", JWT_SECRET: "a-long-secret-for-local-tests-only-0123456789", ZOOM_VIDEO_SDK_KEY: "test-key", ZOOM_VIDEO_SDK_SECRET: "test-secret" };
+  const config = { CORS_ORIGIN: "http://localhost:5173", JWT_SECRET: "a-long-secret-for-local-tests-only-0123456789", ZOOM_VIDEO_SDK_KEY: "test-key", ZOOM_VIDEO_SDK_SECRET: "test-secret", LIVE_TURN_URL: "turns:turn.example.com:5349", LIVE_TURN_USERNAME: "test-user", LIVE_TURN_CREDENTIAL: "test-credential" };
   const server = createApp({ db, config }).listen(0);
   attachLiveSignaling(server, { db, config });
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -34,7 +34,16 @@ test("linked parent receives live alert, Zoom observer token, and browser watch 
     assert.equal(jwt.verify(access.body.token, config.ZOOM_VIDEO_SDK_SECRET).role_type, 0);
     assert.equal((await requestJson(base, `${root}/live-sessions/${zoom.id}/hand/raise`, { method: "POST", token: parent.token })).status, 404);
     const browser = (await requestJson(base, root + "/live-sessions/browser", { method: "POST", token: teacher.token, body: { title: "Browser chemistry" } })).body.session;
+    const icePath = `${root}/live-sessions/${browser.id}/ice-servers`;
+    assert.equal((await requestJson(base, icePath, { token: student.token })).status, 409);
+    assert.equal((await requestJson(base, icePath, { token: teacher.token })).body.iceServers[1].urls, config.LIVE_TURN_URL);
     await requestJson(base, `${root}/live-sessions/${browser.id}/activate`, { method: "POST", token: teacher.token });
+    assert.equal((await requestJson(base, icePath, { token: outsider.token })).status, 404);
+    assert.equal((await requestJson(base, icePath, { token: student.token })).body.iceServers[1].username, config.LIVE_TURN_USERNAME);
+    assert.equal((await requestJson(base, `/parents/live-sessions/${browser.id}/ice-servers`, { token: outsider.token })).status, 404);
+    const parentIce = await requestJson(base, `/parents/live-sessions/${browser.id}/ice-servers`, { token: parent.token });
+    assert.equal(parentIce.status, 200);
+    assert.equal(parentIce.body.iceServers[1].credential, config.LIVE_TURN_CREDENTIAL);
     const observe = (token) => new Promise((resolve, reject) => {
       const socket = new WebSocket(base.replace("http:", "ws:") + "/api/v1/live-signal", { origin: config.CORS_ORIGIN });
       const timer = setTimeout(() => { socket.terminate(); reject(new Error("WebSocket timed out")); }, 3000);
