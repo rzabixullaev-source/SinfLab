@@ -1,10 +1,12 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
+import { SettingsProvider } from "./lib/settings.jsx";
 import "./styles.css";
+import "./settings.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <SettingsProvider><App /></SettingsProvider>
   </React.StrictMode>,
 );

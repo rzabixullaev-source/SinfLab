@@ -17,6 +17,8 @@ import { parentsRouter } from "./modules/parents/routes.js";
 import { activityRouter } from "./modules/activity/routes.js";
 import { aiRouter } from "./modules/ai/routes.js";
 import { vocabularyRouter } from "./modules/vocabulary/routes.js";
+import { vocabularyLearningRouter } from "./modules/vocabulary/learning.js";
+import { vocabularyLibraryRouter } from "./modules/vocabulary/library.js";
 import { gamesRouter } from "./modules/games/routes.js";
 
 export function createApp({ db, config }) {
@@ -37,6 +39,8 @@ export function createApp({ db, config }) {
   app.use("/api/v1/parents", parentsRouter({ db, config }));
   app.use("/api/v1/parents", parentLiveRouter({ db, config }));
   app.use("/api/v1/vocabulary", vocabularyRouter({ db, config }));
+  app.use("/api/v1/vocabulary", vocabularyLearningRouter({ db, config }));
+  app.use("/api/v1/vocabulary", vocabularyLibraryRouter({ db, config }));
   app.use("/api/v1/classrooms", liveRouter({ db, config }));
   app.use("/api/v1/classrooms", classroomsRouter({ db, config }));
   app.use("/api/v1/classrooms", lessonsRouter({ db, config }));

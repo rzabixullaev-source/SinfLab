@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowRight, Atom, BookOpenCheck, CirclePlay, Layers3, ShieldCheck } from "lucide-react";
 import { Button, Field } from "../components/ui.jsx";
 import { errorText } from "../lib/api.js";
+import { SettingsControls, useSettings } from "../lib/settings.jsx";
 
 const demoAccounts = {
   teacher: { email: "ustoz@sinflab.uz", password: "Demo2026!" },
@@ -10,6 +11,7 @@ const demoAccounts = {
 };
 
 export default function AuthScreen({ onAuthenticate, demoMode }) {
+  const { t } = useSettings();
   const [mode, setMode] = useState("login");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -32,38 +34,38 @@ export default function AuthScreen({ onAuthenticate, demoMode }) {
     <section className="auth-story">
       <div className="auth-brand"><span className="brand-mark"><Atom size={22} strokeWidth={2.1} /></span><span>Sinf<span>Lab</span></span></div>
       <div className="auth-story-content">
-        <div className="story-kicker"><span className="kicker-line" /> TA’LIM UCHUN YAGONA MUHIT</div>
-        <h1>Bilimni bir joyda<br /><em>harakatga aylantiring.</em></h1>
-        <p>Jonli dars, vazifa, test va amaliy tajribalar bir o‘quv xonasida. Ustoz uchun boshqaruv, o‘quvchi uchun aniq yo‘l.</p>
+        <div className="story-kicker"><span className="kicker-line" /> {t("authKicker")}</div>
+        <h1>{t("authHeadline")}<br /><em>{t("authEmphasis")}</em></h1>
+        <p>{t("authStory")}</p>
         <div className="story-features">
-          <div><span><BookOpenCheck size={20} /></span><div><strong>Tartibli darslar</strong><small>Har mavzu va material o‘z joyida</small></div></div>
-          <div><span><CirclePlay size={20} /></span><div><strong>Jonli ta’lim</strong><small>Birga o‘rganish va muloqot</small></div></div>
-          <div><span><Layers3 size={20} /></span><div><strong>Amaliy natija</strong><small>Vazifa, test va laboratoriya</small></div></div>
+          <div><span><BookOpenCheck size={20} /></span><div><strong>{t("authLessons")}</strong><small>{t("authLessonsText")}</small></div></div>
+          <div><span><CirclePlay size={20} /></span><div><strong>{t("authLive")}</strong><small>{t("authLiveText")}</small></div></div>
+          <div><span><Layers3 size={20} /></span><div><strong>{t("authPractice")}</strong><small>{t("authPracticeText")}</small></div></div>
         </div>
       </div>
-      <div className="auth-story-footer"><ShieldCheck size={16} /> SinfLab · O‘qishning yangi tartibi</div>
+      <div className="auth-story-footer"><ShieldCheck size={16} /> SinfLab · {t("authBrand")}</div>
       <div className="story-orbit orbit-one" /><div className="story-orbit orbit-two" />
     </section>
 
     <section className="auth-form-side">
       <div className="auth-form-wrap">
         <div className="auth-mobile-brand"><span className="brand-mark"><Atom size={20} /></span> SinfLab</div>
-        <span className="eyebrow">O‘QUV MUHITINGIZGA XUSH KELIBSIZ</span>
-        <h2>{mode === "login" ? "Hisobingizga kiring" : "Hisob yarating"}</h2>
-        <p className="auth-subtitle">{mode === "login" ? "Email va parolingiz bilan kiring." : "Hisob yarating. Keyin guruh yaratishingiz yoki taklif kodi bilan qo‘shilishingiz mumkin."}</p>
+        <SettingsControls />
+        <span className="eyebrow">{t("authEyebrow")}</span>
+        <h2>{t(mode === "login" ? "loginTitle" : "registerTitle")}</h2>
+        <p className="auth-subtitle">{t(mode === "login" ? "loginSubtitle" : "registerSubtitle")}</p>
         <form onSubmit={submit} className="auth-form">
-          {mode === "register" ? <Field label="Ism va familiya" value={values.displayName} onChange={(event) => setValues({ ...values, displayName: event.target.value })} placeholder="Masalan, Dilshod Karimov" minLength={2} required autoComplete="name" /> : null}
-          <Field label="Email manzil" type="email" value={values.email} onChange={(event) => setValues({ ...values, email: event.target.value })} placeholder="ism@example.com" required autoComplete="email" />
-          <Field label="Parol" type="password" value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value })} placeholder="Kamida 8 ta belgi" minLength={mode === "register" ? 8 : 1} required autoComplete={mode === "login" ? "current-password" : "new-password"} />
+          {mode === "register" ? <Field label={t("fullName")} value={values.displayName} onChange={(event) => setValues({ ...values, displayName: event.target.value })} placeholder="Dilshod Karimov" minLength={2} required autoComplete="name" /> : null}
+          <Field label={t("email")} type="email" value={values.email} onChange={(event) => setValues({ ...values, email: event.target.value })} placeholder="name@example.com" required autoComplete="email" />
+          <Field label={t("password")} type="password" value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value })} placeholder="••••••••" minLength={mode === "register" ? 8 : 1} required autoComplete={mode === "login" ? "current-password" : "new-password"} />
           {error ? <div className="form-error" role="alert">{error}</div> : null}
-          <Button type="submit" loading={busy} className="auth-submit">{mode === "login" ? "Kirish" : "Ro‘yxatdan o‘tish"}<ArrowRight size={17} /></Button>
+          <Button type="submit" loading={busy} className="auth-submit">{t(mode === "login" ? "login" : "register")}<ArrowRight size={17} /></Button>
         </form>
-        <div className="auth-switch">{mode === "login" ? "Hali hisobingiz yo‘qmi?" : "Hisobingiz bormi?"} <button onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>{mode === "login" ? "Ro‘yxatdan o‘tish" : "Kirish"}</button></div>
+        <div className="auth-switch">{t(mode === "login" ? "noAccount" : "hasAccount")} <button onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>{t(mode === "login" ? "register" : "login")}</button></div>
         {demoMode && mode === "login" ? <div className="demo-login">
-          <div className="demo-heading"><span className="demo-line" /><span>YOKI DEMO HISOB</span><span className="demo-line" /></div>
+          <div className="demo-heading"><span className="demo-line" /><span>{t("demoAccount")}</span><span className="demo-line" /></div>
           <div className="demo-account-list">{Object.entries(demoAccounts).map(([key, account]) => <button key={key} type="button" disabled={busy} onClick={() => setValues({ ...values, ...account })}>{key === "teacher" ? "Ustoz" : key === "student" ? "O‘quvchi" : "Ota-ona"}: {account.email}</button>)}</div>
-          <p>Demo parol: <code>Demo2026!</code>. Hisobni tanlab, yuqoridagi yagona kirish tugmasini bosing.</p>
-          <p>Demo ma’lumotlari vaqtinchalik xotirada saqlanadi.</p>
+          <p>{t("demoHint")}</p>
         </div> : null}
       </div>
     </section>

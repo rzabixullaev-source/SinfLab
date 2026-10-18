@@ -1,14 +1,13 @@
-const months = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
-const weekdays = ["yakshanba", "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba"];
-const pad = (value) => String(value).padStart(2, "0");
+function localeTag() {
+  const language = typeof document === "undefined" ? "uz" : document.documentElement.lang;
+  return language === "ru" ? "ru-RU" : language === "en" ? "en-US" : "uz-UZ";
+}
 
 export function todayLabel() {
-  const date = new Date();
-  return date.getDate() + "-" + months[date.getMonth()] + ", " + weekdays[date.getDay()];
+  return new Intl.DateTimeFormat(localeTag(), { day: "numeric", month: "long", weekday: "long" }).format(new Date());
 }
 
 export function dateTimeLabel(value) {
-  if (!value) return "Vaqt belgilanmagan";
-  const date = new Date(value);
-  return date.getDate() + "-" + months[date.getMonth()] + " · " + pad(date.getHours()) + ":" + pad(date.getMinutes());
+  if (!value) return { "uz-UZ": "Vaqt belgilanmagan", "en-US": "Time not set", "ru-RU": "Время не указано" }[localeTag()];
+  return new Intl.DateTimeFormat(localeTag(), { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }

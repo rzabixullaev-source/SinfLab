@@ -76,6 +76,12 @@ export async function ensureIndexes(db) {
     db.collection("vocabulary_words").createIndex({ ownerId: 1, createdAt: -1 }),
     db.collection("vocabulary_words").createIndex({ ownerId: 1, reviewDueAt: 1 }),
     db.collection("vocabulary_books").createIndex({ published: 1, createdAt: -1 }),
+    db.collection("vocabulary_courses").createIndex({ ownerId: 1, nativeLanguage: 1, targetLanguage: 1 }, { unique: true }),
+    db.collection("vocabulary_lessons").createIndex({ courseId: 1, day: 1 }, { unique: true }),
+    db.collection("vocabulary_words").createIndex({ lessonId: 1, termLower: 1 }, { unique: true, partialFilterExpression: { lessonId: { $exists: true } } }),
+    db.collection("vocabulary_books").createIndex({ courseId: 1 }, { unique: true, partialFilterExpression: { courseId: { $exists: true } } }),
+    db.collection("library_pdfs").createIndex({ ownerId: 1, createdAt: -1 }),
+    db.collection("library_pdfs").createIndex({ published: 1, createdAt: -1 }),
     db.collection("game_attempts").createIndex({ classroomId: 1, studentId: 1, quizId: 1, questionIndex: 1, mode: 1 }, { unique: true }),
   ]);
 }

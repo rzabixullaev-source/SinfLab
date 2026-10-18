@@ -15,14 +15,23 @@ const wordSchema = z.object({
   meaning: z.string().trim().min(1).max(300),
   example: z.string().trim().max(500).default(""),
   forms: z.string().trim().max(500).default(""),
+  pronunciation: z.string().trim().max(180).default(""),
+  exampleTranslation: z.string().trim().max(500).default(""),
   difficult: z.boolean().default(false),
 }).strict();
 const bookSchema = z.object({ title: z.string().trim().min(3).max(120), wordIds: z.array(z.string()).min(1).max(500), published: z.boolean().default(false) }).strict();
 const editBookSchema = bookSchema.partial().strict();
 const reviewSchema = z.object({ grade: z.enum(["again", "hard", "good", "easy"]) }).strict();
-const publicWord = (word) => ({ id: String(word._id), term: word.term, language: word.language, meaning: word.meaning, example: word.example, forms: word.forms, difficult: word.difficult, reviewDueAt: word.reviewDueAt ?? null, reviewCount: word.reviewCount ?? 0, reviewIntervalDays: word.reviewIntervalDays ?? 0 });
-const snapshotWord = (word) => ({ id: String(word._id), term: word.term, language: word.language, meaning: word.meaning, example: word.example, forms: word.forms });
-const publicBook = (book, includeWords = false) => ({ id: String(book._id), title: book.title, authorName: book.authorName, published: book.published, createdAt: book.createdAt, updatedAt: book.updatedAt ?? book.createdAt, wordCount: book.words.length, ...(includeWords ? { words: book.words } : {}) });
+const publicWord = (word) => ({ id: String(word._id), term: word.term, language: word.language, meaning: word.meaning, example: word.example, forms: word.forms,
+  pronunciation: word.pronunciation || "", exampleTranslation: word.exampleTranslation || "", examples: word.examples || [],
+  courseId: word.courseId ? String(word.courseId) : null, lessonId: word.lessonId ? String(word.lessonId) : null,
+  difficult: word.difficult, reviewDueAt: word.reviewDueAt ?? null, reviewCount: word.reviewCount ?? 0, reviewIntervalDays: word.reviewIntervalDays ?? 0 });
+const snapshotWord = (word) => ({ id: String(word._id), term: word.term, language: word.language, meaning: word.meaning, example: word.example, forms: word.forms,
+  pronunciation: word.pronunciation || "", exampleTranslation: word.exampleTranslation || "", examples: word.examples || [] });
+const publicBook = (book, includeWords = false) => ({ id: String(book._id), title: book.title, authorName: book.authorName, published: book.published,
+  nativeLanguage: book.nativeLanguage || null, targetLanguage: book.targetLanguage || null, lessonCount: book.lessons?.length || 0,
+  lessons: includeWords ? book.lessons || [] : undefined, kind: "vocabulary", createdAt: book.createdAt, updatedAt: book.updatedAt ?? book.createdAt,
+  wordCount: book.words.length, ...(includeWords ? { words: book.words } : {}) });
 
 async function snapshotWords(db, ownerId, wordIds) {
   const ids = wordIds.map(parseObjectId);
@@ -59,8 +68,15 @@ export function vocabularyRouter({ db, config }) {
     if (!current) throw new HttpError(404, "WORD_NOT_FOUND", "Word not found");
     const input = wordSchema.partial().strict().parse(request.body);
     if (!Object.keys(input).length) throw new HttpError(400, "VALIDATION_ERROR", "A change is required");
-    await db.collection("vocabulary_words").updateOne({ _id: wordId }, { $set: { ...input, updatedAt: new Date() } });
-    response.json({ word: publicWord({ ...current, ...input }) });
+    const update = { ...input, updatedAt: new Date() };
+    if (current.lessonId && input.term !== undefined) {
+      update.termLower = input.term.toLocaleLowerCase();
+      const duplicate = await db.collection("vocabulary_words").findOne({ lessonId: current.lessonId, termLower: update.termLower });
+      if (duplicate && String(duplicate._id) !== String(wordId)) throw new HttpError(409, "WORD_EXISTS", "This word is already in the topic");
+    }
+    try { await db.collection("vocabulary_words").updateOne({ _id: wordId, ownerId: request.user._id }, { $set: update }); }
+    catch (error) { if (error?.code === 11000) throw new HttpError(409, "WORD_EXISTS", "This word is already in the topic"); throw error; }
+    response.json({ word: publicWord({ ...current, ...update }) });
   });
   router.delete("/words/:wordId", async (request, response) => {
     const result = await db.collection("vocabulary_words").deleteOne({ _id: parseObjectId(request.params.wordId), ownerId: request.user._id });
@@ -112,6 +128,9 @@ export function vocabularyRouter({ db, config }) {
     if (!book) throw new HttpError(404, "BOOK_NOT_FOUND", "Book not found");
     const input = editBookSchema.parse(request.body);
     if (!Object.keys(input).length) throw new HttpError(400, "VALIDATION_ERROR", "A change is required");
+    if (book.courseId && (input.title !== undefined || input.wordIds !== undefined)) {
+      throw new HttpError(400, "MANAGED_BOOK", "Compile this book from its language lessons");
+    }
     const update = {
       ...(input.title !== undefined ? { title: input.title } : {}),
       ...(input.published !== undefined ? { published: input.published } : {}),

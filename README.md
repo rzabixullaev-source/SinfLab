@@ -34,6 +34,12 @@ MongoDB Atlas URI ushbu repoda saqlanmaydi. Lokal Atlas ulanishi uchun internetg
 
 Barcha foydalanuvchilar bitta login sahifasidan email va parol bilan kiradi. Sinf yaratgan foydalanuvchi o‘sha sinf egasi va ustozi bo‘ladi; kod bilan qo‘shilgan foydalanuvchining sinfdagi rolini ustoz taklif orqali belgilaydi. Bir foydalanuvchi turli sinflarda turli rolga ega bo‘lishi mumkin. Sinfda o‘quvchi bo‘lgan foydalanuvchi bosh sahifada ota-ona uchun bir martalik kod yaratadi; ota-ona umumiy hisobidan ota-ona kabinetiga o‘tib shu kodni kiritadi. Shundan keyin faqat bog‘langan farzandning dars, vazifa, test, laboratoriya, davomat va rivojlanish natijalari ko‘rinadi. Mahalliy demoda `otaona@sinflab.uz` / `Demo2026!` hisobi demo o‘quvchiga oldindan bog‘langan.
 
+## Til kitoblari va PDF kutubxonasi
+
+`Til kitoblarim` sahifasida avval biladigan til va o‘rganiladigan til tanlanadi. Har bir til juftligi alohida kitob bo‘ladi. Har bir kitobda Toshkent vaqti bo‘yicha kuniga bitta mavzu ochiladi; mavzuga cheklanmagan miqdorda so‘z kartalari qo‘shish mumkin. `GEMINI_API_KEY` sozlangan bo‘lsa, faqat so‘zni yozish kifoya: Gemini tarjima, talaffuz, so‘z shakllari va ikki misol gap tayyorlaydi. Kalit yoki AI xizmati mavjud bo‘lmasa, kartani qo‘lda to‘ldirish mumkin. Eski lug‘atdagi so‘zlar alohida saqlanadi va avvalgi lug‘at sahifasidan ochiladi.
+
+`Kitoblar` sahifasida mavzularni birlashtirib PDF kitob yaratish, uni yuklab olish va ommaga ulashish mumkin. Muallif kitobni e’lon qilmaguncha u shaxsiy bo‘ladi. Boshqa PDF kitoblar ham yuklanadi (20 MB gacha), ular ham dastlab shaxsiy saqlanadi. Ulashilgan kitoblarni tizimga kirgan foydalanuvchilar ko‘radi va yuklab oladi. Sayt tepasidagi sozlamalarda oq/qora ko‘rinish hamda o‘zbek, rus, ingliz tili tanlanadi; avtomatik rejim brauzer tili va tizim ko‘rinishiga moslashadi. Hozir tarjima asosiy sahifalar, kirish, lug‘at va kitoblarda qo‘llanadi; sinf ichidagi ayrim eski modullar hali o‘zbekcha.
+
 ## Amalga oshgan oqim
 
 Ro‘yxatdan o‘tish → xona ochish → taklif bilan qo‘shilish → dars va material → Zoom/Meet havolali jonli sessiya va davomat → vazifa, topshirish, izoh, qayta topshirish → quiz → Ohm qonuni lab urinishlari → o‘quvchi progressi.

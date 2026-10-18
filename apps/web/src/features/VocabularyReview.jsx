@@ -2,15 +2,12 @@ import { useState } from "react";
 import { BookOpen, RotateCcw } from "lucide-react";
 import { api, errorText } from "../lib/api.js";
 import { Badge, Button, Panel } from "../components/ui.jsx";
+import { useSettings } from "../lib/settings.jsx";
 
-const grades = [
-  ["again", "Yana ko‘raman"],
-  ["hard", "Qiyin"],
-  ["good", "Yaxshi"],
-  ["easy", "Oson"],
-];
+const grades = ["again", "hard", "good", "easy"];
 
 export default function VocabularyReview({ words, token, onReviewed, onError }) {
+  const { t } = useSettings();
   const [reviewedIds, setReviewedIds] = useState([]);
   const [attemptCount, setAttemptCount] = useState(0);
   const [index, setIndex] = useState(0);
@@ -33,9 +30,9 @@ export default function VocabularyReview({ words, token, onReviewed, onError }) 
   }
 
   return <Panel className="review-panel">
-    <div className="review-header"><div><span className="eyebrow"><RotateCcw size={15} /> TAKRORLASH KARTALARI</span><h2>So‘zlarni eslab qoling</h2><p>{due.length} ta so‘z takrorlashga tayyor. Avval so‘zni o‘ylang, keyin javobni oching.</p></div><Badge tone="teal">{attemptCount} ta javob</Badge></div>
-    {word ? <div className="review-card"><div className="review-card-front"><span>{word.language} · {word.reviewCount ? `${word.reviewCount} marta ko‘rilgan` : "Yangi so‘z"}</span><strong>{word.term}</strong><button type="button" onClick={() => { setIndex((previous) => previous + 1); setRevealed(false); }}>Keyingi so‘z →</button></div>
-      {revealed ? <div className="review-card-answer"><strong>{word.meaning}</strong>{word.forms ? <p>Shakllari: {word.forms}</p> : null}{word.example ? <p>Misol: {word.example}</p> : null}<div className="review-grades">{grades.map(([value, label]) => <button key={value} type="button" disabled={busy} onClick={() => grade(value)}>{label}</button>)}</div></div> : <Button onClick={() => setRevealed(true)}>Javobni ko‘rish</Button>}</div>
-      : <div className="review-complete"><BookOpen size={27} /><strong>Hozircha takrorlanadigan so‘z yo‘q</strong><p>Yangi so‘z qo‘shing yoki keyingi takrorlash vaqtini kuting.</p></div>}
+    <div className="review-header"><div><span className="eyebrow"><RotateCcw size={15} /> {t("reviewCards")}</span><h2>{t("rememberWords")}</h2><p>{t("reviewReady", { count: due.length })}</p></div><Badge tone="teal">{t("answers", { count: attemptCount })}</Badge></div>
+    {word ? <div className="review-card"><div className="review-card-front"><span>{word.language} · {word.reviewCount ? t("seenTimes", { count: word.reviewCount }) : t("newWord")}</span><strong>{word.term}</strong><button type="button" onClick={() => { setIndex((previous) => previous + 1); setRevealed(false); }}>{t("nextWord")}</button></div>
+      {revealed ? <div className="review-card-answer"><strong>{word.meaning}</strong>{word.forms ? <p>{t("forms")}: {word.forms}</p> : null}{word.example ? <p>{t("example")}: {word.example}</p> : null}<div className="review-grades">{grades.map((value) => <button key={value} type="button" disabled={busy} onClick={() => grade(value)}>{t(value)}</button>)}</div></div> : <Button onClick={() => setRevealed(true)}>{t("seeAnswer")}</Button>}</div>
+      : <div className="review-complete"><BookOpen size={27} /><strong>{t("noReview")}</strong><p>{t("noReviewHint")}</p></div>}
   </Panel>;
 }
