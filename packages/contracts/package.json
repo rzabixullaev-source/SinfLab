@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./game-modes": "./src/game-modes.js"
+  },
   "dependencies": {
     "zod": "^4.1.11"
   }

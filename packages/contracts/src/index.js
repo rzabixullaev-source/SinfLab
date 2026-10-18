@@ -1,5 +1,6 @@
 import { z } from "zod";
 export { studioTools, studioScenarios, studioById, studioInventory, studioSubjects, studioLabSchema, studioRunSchema, simulateStudio } from "./studio.js";
+export { gameModesForSubject } from "./game-modes.js";
 
 export const registerSchema = z.object({
   displayName: z.string().trim().min(2).max(80),
@@ -76,6 +77,7 @@ export const quizSchema = z.object({
     choices: z.array(z.string().trim().min(1).max(500)).min(2).max(6),
     correctIndex: z.number().int().min(0),
     points: z.number().int().min(1).max(100).default(1),
+    explanation: z.string().trim().max(1000).optional(),
   }).strict().refine((question) => question.correctIndex < question.choices.length,
     "Correct answer must be one of the choices")).min(1).max(30),
 }).strict();

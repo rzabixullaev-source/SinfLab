@@ -13,7 +13,7 @@ function publicQuiz(quiz, includeKey = false) {
     title: quiz.title, status: quiz.status,
     questions: quiz.questions.map((question, index) => ({
       index, prompt: question.prompt, choices: question.choices, points: question.points,
-      ...(includeKey ? { correctIndex: question.correctIndex } : {}),
+      ...(includeKey ? { correctIndex: question.correctIndex, explanation: question.explanation ?? "" } : {}),
     })),
     createdAt: quiz.createdAt, publishedAt: quiz.publishedAt,
   };

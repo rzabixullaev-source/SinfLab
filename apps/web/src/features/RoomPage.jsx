@@ -160,7 +160,7 @@ export default function RoomPage({ session, roomId, tab, navigate, notify, demoM
     {tab === "assignments" ? <AssignmentsTab room={room} assignments={data.assignments} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /> : null}
     {tab === "quizzes" ? <QuizzesTab room={room} quizzes={data.quizzes} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /> : null}
     {tab === "ai" ? <AiTab room={room} session={session} /> : null}
-    {tab === "games" ? <GamesTab room={room} session={session} /> : null}
+    {tab === "games" ? <GamesTab room={room} session={session} onNavigate={navigate} /> : null}
     {tab === "live" ? <LiveTab room={room} sessions={data.sessions} lessons={data.lessons} session={session} onSessionChange={updateLiveSession} notify={notify} demoMode={demoMode} /> : null}
     {tab === "labs" ? <Suspense fallback={<Panel><p className="muted">Laboratoriya yuklanmoqda...</p></Panel>}><LabsTab room={room} labs={data.labs} lessons={data.lessons} session={session} refresh={refresh} refreshProgress={refreshProgress} notify={notify} /></Suspense> : null}
     {tab === "progress" && !staff ? <ProgressTab progress={progress} navigate={navigate} room={room} session={session} /> : null}
