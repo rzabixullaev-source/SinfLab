@@ -65,6 +65,22 @@ export async function downloadAsset(classroomId, asset, token) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+export async function downloadVocabularyPdf(book, token) {
+  const response = await fetch(base + "/vocabulary/books/" + book.id + "/pdf", {
+    headers: { authorization: "Bearer " + token },
+  });
+  if (!response.ok) throw new ApiError("PDF faylni yuklab bo‘lmadi", response.status);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = (book.title.replace(/[^\p{L}\p{N}-]+/gu, "-") || "lugat") + ".pdf";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 const messages = {
   INVALID_CREDENTIALS: "Email yoki parol xato.",
   EMAIL_TAKEN: "Bu email allaqachon ro‘yxatdan o‘tgan.",

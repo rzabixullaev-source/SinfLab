@@ -74,6 +74,7 @@ export async function ensureIndexes(db) {
     db.collection("ai_responses").createIndex({ classroomId: 1, createdAt: -1 }),
     db.collection("ai_usage").createIndex({ createdAt: 1 }, { expireAfterSeconds: 3 * 86400 }),
     db.collection("vocabulary_words").createIndex({ ownerId: 1, createdAt: -1 }),
+    db.collection("vocabulary_words").createIndex({ ownerId: 1, reviewDueAt: 1 }),
     db.collection("vocabulary_books").createIndex({ published: 1, createdAt: -1 }),
     db.collection("game_attempts").createIndex({ classroomId: 1, studentId: 1, quizId: 1, questionIndex: 1, mode: 1 }, { unique: true }),
   ]);

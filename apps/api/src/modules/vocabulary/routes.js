@@ -7,6 +7,7 @@ import { parseObjectId } from "../../shared/ids.js";
 import { generateGemini } from "../ai/gemini.js";
 import { aiRateLimit } from "../ai/limit.js";
 import { reserveAiRequest } from "../ai/budget.js";
+import { createBookPdf } from "./pdf.js";
 
 const wordSchema = z.object({
   term: z.string().trim().min(1).max(120),
@@ -17,8 +18,26 @@ const wordSchema = z.object({
   difficult: z.boolean().default(false),
 }).strict();
 const bookSchema = z.object({ title: z.string().trim().min(3).max(120), wordIds: z.array(z.string()).min(1).max(500), published: z.boolean().default(false) }).strict();
-const publicWord = (word) => ({ id: String(word._id), term: word.term, language: word.language, meaning: word.meaning, example: word.example, forms: word.forms, difficult: word.difficult });
-const publicBook = (book, includeWords = false) => ({ id: String(book._id), title: book.title, authorName: book.authorName, published: book.published, createdAt: book.createdAt, wordCount: book.words.length, ...(includeWords ? { words: book.words } : {}) });
+const editBookSchema = bookSchema.partial().strict();
+const reviewSchema = z.object({ grade: z.enum(["again", "hard", "good", "easy"]) }).strict();
+const publicWord = (word) => ({ id: String(word._id), term: word.term, language: word.language, meaning: word.meaning, example: word.example, forms: word.forms, difficult: word.difficult, reviewDueAt: word.reviewDueAt ?? null, reviewCount: word.reviewCount ?? 0, reviewIntervalDays: word.reviewIntervalDays ?? 0 });
+const snapshotWord = (word) => ({ id: String(word._id), term: word.term, language: word.language, meaning: word.meaning, example: word.example, forms: word.forms });
+const publicBook = (book, includeWords = false) => ({ id: String(book._id), title: book.title, authorName: book.authorName, published: book.published, createdAt: book.createdAt, updatedAt: book.updatedAt ?? book.createdAt, wordCount: book.words.length, ...(includeWords ? { words: book.words } : {}) });
+
+async function snapshotWords(db, ownerId, wordIds) {
+  const ids = wordIds.map(parseObjectId);
+  if (new Set(ids.map(String)).size !== ids.length) throw new HttpError(400, "VALIDATION_ERROR", "Duplicate words are not allowed");
+  const words = await db.collection("vocabulary_words").find({ ownerId, _id: { $in: ids } }).toArray();
+  if (words.length !== ids.length) throw new HttpError(400, "INVALID_WORDS", "Some words are unavailable");
+  const byId = new Map(words.map((word) => [String(word._id), word]));
+  return ids.map((id) => snapshotWord(byId.get(String(id))));
+}
+
+async function readableBook(db, bookId, userId) {
+  const book = await db.collection("vocabulary_books").findOne({ _id: parseObjectId(bookId) });
+  if (!book || (!book.published && String(book.ownerId) !== String(userId))) throw new HttpError(404, "BOOK_NOT_FOUND", "Book not found");
+  return book;
+}
 
 export function vocabularyRouter({ db, config }) {
   const router = Router();
@@ -48,6 +67,19 @@ export function vocabularyRouter({ db, config }) {
     if (!result.deletedCount) throw new HttpError(404, "WORD_NOT_FOUND", "Word not found");
     response.status(204).send();
   });
+  router.post("/words/:wordId/review", async (request, response) => {
+    const wordId = parseObjectId(request.params.wordId);
+    const word = await db.collection("vocabulary_words").findOne({ _id: wordId, ownerId: request.user._id });
+    if (!word) throw new HttpError(404, "WORD_NOT_FOUND", "Word not found");
+    const { grade } = reviewSchema.parse(request.body);
+    const previous = word.reviewIntervalDays ?? 0;
+    const days = { again: 0, hard: Math.max(1, Math.ceil(previous * 1.2)), good: Math.max(3, Math.ceil(previous * 2)), easy: Math.max(7, Math.ceil(previous * 3)) }[grade];
+    const reviewedAt = new Date();
+    const reviewDueAt = new Date(+reviewedAt + days * 86400000);
+    const update = { reviewCount: (word.reviewCount ?? 0) + 1, reviewIntervalDays: days, reviewDueAt, lastReviewedAt: reviewedAt, updatedAt: reviewedAt };
+    await db.collection("vocabulary_words").updateOne({ _id: wordId, ownerId: request.user._id }, { $set: update });
+    response.json({ word: publicWord({ ...word, ...update }) });
+  });
   router.post("/words/:wordId/explain", aiRateLimit, async (request, response) => {
     const word = await db.collection("vocabulary_words").findOne({ _id: parseObjectId(request.params.wordId), ownerId: request.user._id });
     if (!word) throw new HttpError(404, "WORD_NOT_FOUND", "Word not found");
@@ -69,19 +101,34 @@ export function vocabularyRouter({ db, config }) {
   });
   router.post("/books", async (request, response) => {
     const input = bookSchema.parse(request.body);
-    const ids = input.wordIds.map(parseObjectId);
-    if (new Set(ids.map(String)).size !== ids.length) throw new HttpError(400, "VALIDATION_ERROR", "Duplicate words are not allowed");
-    const words = await db.collection("vocabulary_words").find({ ownerId: request.user._id, _id: { $in: ids } }).toArray();
-    if (words.length !== ids.length) throw new HttpError(400, "INVALID_WORDS", "Some words are unavailable");
-    const byId = new Map(words.map((word) => [String(word._id), word]));
-    const book = { _id: new ObjectId(), ownerId: request.user._id, authorName: request.user.displayName, title: input.title, published: input.published, words: ids.map((id) => publicWord(byId.get(String(id)))), createdAt: new Date() };
+    const words = await snapshotWords(db, request.user._id, input.wordIds);
+    const book = { _id: new ObjectId(), ownerId: request.user._id, authorName: request.user.displayName, title: input.title, published: input.published, words, createdAt: new Date() };
     await db.collection("vocabulary_books").insertOne(book);
     response.status(201).json({ book: publicBook(book, true) });
   });
+  router.patch("/books/:bookId", async (request, response) => {
+    const bookId = parseObjectId(request.params.bookId);
+    const book = await db.collection("vocabulary_books").findOne({ _id: bookId, ownerId: request.user._id });
+    if (!book) throw new HttpError(404, "BOOK_NOT_FOUND", "Book not found");
+    const input = editBookSchema.parse(request.body);
+    if (!Object.keys(input).length) throw new HttpError(400, "VALIDATION_ERROR", "A change is required");
+    const update = {
+      ...(input.title !== undefined ? { title: input.title } : {}),
+      ...(input.published !== undefined ? { published: input.published } : {}),
+      ...(input.wordIds !== undefined ? { words: await snapshotWords(db, request.user._id, input.wordIds) } : {}),
+      updatedAt: new Date(),
+    };
+    await db.collection("vocabulary_books").updateOne({ _id: bookId, ownerId: request.user._id }, { $set: update });
+    response.json({ book: publicBook({ ...book, ...update }, true) });
+  });
   router.get("/books/:bookId", async (request, response) => {
-    const book = await db.collection("vocabulary_books").findOne({ _id: parseObjectId(request.params.bookId) });
-    if (!book || (!book.published && String(book.ownerId) !== String(request.user._id))) throw new HttpError(404, "BOOK_NOT_FOUND", "Book not found");
+    const book = await readableBook(db, request.params.bookId, request.user._id);
     response.json({ book: publicBook(book, true) });
+  });
+  router.get("/books/:bookId/pdf", async (request, response) => {
+    const book = await readableBook(db, request.params.bookId, request.user._id);
+    response.set({ "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="sinflab-book-${book._id}.pdf"`, "Cache-Control": "private, no-store" });
+    createBookPdf(book).pipe(response);
   });
   return router;
 }

@@ -30,8 +30,8 @@ export function Select({ label, children, className = "", ...props }) {
   </label>;
 }
 
-export function Panel({ children, className = "" }) {
-  return <section className={"panel " + className}>{children}</section>;
+export function Panel({ children, className = "", ...props }) {
+  return <section className={"panel " + className} {...props}>{children}</section>;
 }
 
 export function Badge({ children, tone = "neutral" }) {
